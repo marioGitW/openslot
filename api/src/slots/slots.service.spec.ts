@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
+import { MAX_DURATION_MIN } from './slot-duration';
 import { SlotsService } from './slots.service';
 
 const MINUTE = 60_000;
@@ -70,6 +71,39 @@ describe('SlotsService overlap rule', () => {
       durationMin * MINUTE,
     );
     expect(prisma.slot.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a slot that starts inside a long slot that began well before it', async () => {
+    // Existing 120-minute slot from 08:30 to 10:30; the new one starts at 10:00.
+    const long = {
+      ...existing,
+      id: 'long',
+      startsAt: new Date(existingStart.getTime() - 90 * MINUTE),
+      durationMin: 120,
+    };
+    prisma.slot.findMany.mockResolvedValue([long]);
+
+    await expect(
+      service.create({ topic: 'New', startsAt: at(0), durationMin: 15 }),
+    ).rejects.toThrow(
+      new ConflictException('This time overlaps another slot.'),
+    );
+    expect(prisma.slot.create).not.toHaveBeenCalled();
+  });
+
+  it('looks back the maximum slot duration for overlap candidates', async () => {
+    prisma.slot.findMany.mockResolvedValue([]);
+
+    await service.create({ topic: 'New', startsAt: at(0), durationMin: 30 });
+
+    expect(prisma.slot.findMany).toHaveBeenCalledWith({
+      where: {
+        startsAt: {
+          gte: new Date(existingStart.getTime() - MAX_DURATION_MIN * MINUTE),
+          lt: new Date(existingStart.getTime() + 30 * MINUTE),
+        },
+      },
+    });
   });
 
   it('rejects a slot in the past', async () => {

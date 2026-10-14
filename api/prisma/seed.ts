@@ -13,7 +13,7 @@ const TIME_ZONE = 'Europe/Skopje';
 interface SeedSlot {
   dayOffset: number;
   time: string;
-  durationMin: 15 | 30 | 45 | 60;
+  durationMin: number;
   topic: string;
   booking?: { name: string; email: string; note: string };
 }

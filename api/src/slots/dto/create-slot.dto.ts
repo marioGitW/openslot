@@ -1,14 +1,22 @@
 import {
-  IsIn,
-  IsInt,
   IsISO8601,
   IsString,
   Length,
   Matches,
+  ValidateBy,
 } from 'class-validator';
 import { Trim } from '../../common/trim.transform';
+import { DURATION_MESSAGE, isValidDuration } from '../slot-duration';
 
-export const SLOT_DURATIONS = [15, 30, 45, 60] as const;
+// One check instead of IsInt/Min/Max/IsDivisibleBy, so a bad value gets one message.
+const IsSlotDuration = () =>
+  ValidateBy({
+    name: 'isSlotDuration',
+    validator: {
+      validate: isValidDuration,
+      defaultMessage: () => DURATION_MESSAGE,
+    },
+  });
 
 export class CreateSlotDto {
   @Trim()
@@ -23,7 +31,6 @@ export class CreateSlotDto {
   })
   startsAt: string;
 
-  @IsInt()
-  @IsIn(SLOT_DURATIONS)
+  @IsSlotDuration()
   durationMin: number;
 }

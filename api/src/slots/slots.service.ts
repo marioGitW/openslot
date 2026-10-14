@@ -6,11 +6,12 @@ import {
 } from '@nestjs/common';
 import { isPrismaError } from '../prisma/prisma-errors';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateSlotDto, SLOT_DURATIONS } from './dto/create-slot.dto';
+import { CreateSlotDto } from './dto/create-slot.dto';
 import { SlotListStatus } from './dto/list-slots-query.dto';
+import { MAX_DURATION_MIN } from './slot-duration';
 import { SlotResponse, slotEndsAt, toSlotResponse } from './slot.mapper';
 
-const MAX_DURATION_MS = Math.max(...SLOT_DURATIONS) * 60_000;
+const MAX_DURATION_MS = MAX_DURATION_MIN * 60_000;
 
 @Injectable()
 export class SlotsService {
