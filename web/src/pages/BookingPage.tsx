@@ -55,7 +55,10 @@ export function BookingPage() {
   const form = useForm<BookingFormInput, unknown, BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: emptyBookingForm,
+    // Errors appear once a field is left, then update live while it's fixed.
     mode: 'onTouched',
+    reValidateMode: 'onChange',
+    shouldFocusError: true,
   })
 
   // null = not chosen by the user yet; the effective value is derived from data.

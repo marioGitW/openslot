@@ -8,7 +8,8 @@ export const slotSchema = z
     topic: z
       .string()
       .trim()
-      .min(3, 'Use at least 3 characters.')
+      .min(1, 'Topic is required.')
+      .min(3, 'Topic must be at least 3 characters.')
       .max(60, 'Use 60 characters or fewer.'),
     date: z.string().min(1, 'Pick a date.'),
     time: z.string().min(1, 'Pick a start time.'),

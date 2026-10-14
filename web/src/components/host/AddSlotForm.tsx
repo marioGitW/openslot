@@ -3,6 +3,7 @@ import { CalendarIcon, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
+import { FieldError } from '@/components/common/FieldError'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
@@ -52,7 +53,10 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
       duration: '30',
       customDuration: '',
     },
+    // Errors appear once a field is left, then update live while it's fixed.
     mode: 'onTouched',
+    reValidateMode: 'onChange',
+    shouldFocusError: true,
   })
   const {
     register,
@@ -123,11 +127,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
           aria-describedby={errors.topic ? 'slot-topic-error' : undefined}
           {...register('topic')}
         />
-        {errors.topic && (
-          <p id="slot-topic-error" className="text-sm text-destructive-text">
-            {errors.topic.message}
-          </p>
-        )}
+        <FieldError id="slot-topic-error" message={errors.topic?.message} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
@@ -140,6 +140,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
+                    ref={field.ref}
                     id="slot-date"
                     variant="outline"
                     className={cn(
@@ -147,6 +148,8 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
                       !field.value && 'text-muted-foreground',
                     )}
                     aria-invalid={!!errors.date}
+                    aria-describedby={errors.date ? 'slot-date-error' : undefined}
+                    onBlur={field.onBlur}
                   >
                     <CalendarIcon aria-hidden />
                     {field.value ? formatDayShort(field.value) : 'Pick a date'}
@@ -169,7 +172,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
               </Popover>
             )}
           />
-          {errors.date && <p className="text-sm text-destructive-text">{errors.date.message}</p>}
+          <FieldError id="slot-date-error" message={errors.date?.message} />
         </div>
 
         <div className="space-y-2">
@@ -186,10 +189,11 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
                 onBlur={field.onBlur}
                 isDisabled={(option) => date === today && option <= nowTime}
                 invalid={!!errors.time}
+                describedBy={errors.time ? 'slot-time-error' : undefined}
               />
             )}
           />
-          {errors.time && <p className="text-sm text-destructive-text">{errors.time.message}</p>}
+          <FieldError id="slot-time-error" message={errors.time?.message} />
         </div>
       </div>
 
@@ -232,11 +236,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
             </div>
           )}
         </div>
-        {errors.customDuration && (
-          <p id="slot-duration-error" className="text-sm text-destructive-text">
-            {errors.customDuration.message}
-          </p>
-        )}
+        <FieldError id="slot-duration-error" message={errors.customDuration?.message} />
       </div>
 
       <div aria-live="polite" className="min-h-6 space-y-1 text-sm">

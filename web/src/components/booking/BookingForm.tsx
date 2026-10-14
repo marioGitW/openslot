@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { useWatch, type UseFormReturn } from 'react-hook-form'
+import { FieldError } from '@/components/common/FieldError'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,11 +56,7 @@ export function BookingForm({
             aria-describedby={errors.name ? 'booking-name-error' : undefined}
             {...register('name')}
           />
-          {errors.name && (
-            <p id="booking-name-error" className="text-sm text-destructive-text">
-              {errors.name.message}
-            </p>
-          )}
+          <FieldError id="booking-name-error" message={errors.name?.message} />
         </div>
 
         <div className="space-y-2">
@@ -73,11 +70,7 @@ export function BookingForm({
             aria-describedby={errors.email ? 'booking-email-error' : undefined}
             {...register('email')}
           />
-          {errors.email && (
-            <p id="booking-email-error" className="text-sm text-destructive-text">
-              {errors.email.message}
-            </p>
-          )}
+          <FieldError id="booking-email-error" message={errors.email?.message} />
         </div>
 
         <div className="space-y-2">
@@ -90,11 +83,15 @@ export function BookingForm({
             rows={4}
             className="min-h-24"
             aria-invalid={!!errors.note}
-            aria-describedby="booking-note-count"
+            aria-describedby={
+              errors.note ? 'booking-note-error booking-note-count' : 'booking-note-count'
+            }
             {...register('note')}
           />
           <div className="flex justify-between gap-2 text-xs">
-            <span className="text-destructive-text">{errors.note?.message}</span>
+            <span id="booking-note-error" className="text-sm text-destructive-text">
+              {errors.note?.message}
+            </span>
             <span
               id="booking-note-count"
               className={cn(
