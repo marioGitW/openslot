@@ -1,0 +1,97 @@
+import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { Prisma } from '../generated/prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { BookingsService } from './bookings.service';
+
+const HOUR = 60 * 60_000;
+
+describe('BookingsService', () => {
+  let service: BookingsService;
+  const prisma = {
+    slot: { findUnique: jest.fn() },
+    booking: { create: jest.fn(), findUnique: jest.fn() },
+  };
+
+  const dto = { name: 'Ana', email: 'ana@example.com', note: 'Hi' };
+  const futureSlot = () => ({
+    id: 'slot-1',
+    topic: 'Office hours',
+    startsAt: new Date(Date.now() + HOUR),
+    durationMin: 30,
+    createdAt: new Date(),
+  });
+
+  beforeEach(async () => {
+    jest.resetAllMocks();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        BookingsService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = moduleRef.get(BookingsService);
+  });
+
+  it('creates a booking and returns it with its slot', async () => {
+    const slot = futureSlot();
+    prisma.slot.findUnique.mockResolvedValue(slot);
+    prisma.booking.create.mockResolvedValue({
+      id: 'booking-1',
+      slotId: slot.id,
+      ...dto,
+      aiMessage: null,
+      createdAt: new Date(),
+      slot,
+    });
+
+    const result = await service.create(slot.id, dto);
+
+    expect(result.id).toBe('booking-1');
+    expect(result.slot).toMatchObject({ id: slot.id, status: 'booked' });
+  });
+
+  it('throws ConflictException when the unique constraint fails (P2002)', async () => {
+    prisma.slot.findUnique.mockResolvedValue(futureSlot());
+    prisma.booking.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: 'test',
+      }),
+    );
+
+    const promise = service.create('slot-1', dto);
+
+    await expect(promise).rejects.toBeInstanceOf(ConflictException);
+    await expect(promise).rejects.toThrow('This slot has just been booked.');
+  });
+
+  it('rethrows other Prisma errors', async () => {
+    prisma.slot.findUnique.mockResolvedValue(futureSlot());
+    const error = new Error('connection lost');
+    prisma.booking.create.mockRejectedValue(error);
+
+    await expect(service.create('slot-1', dto)).rejects.toBe(error);
+  });
+
+  it('throws NotFoundException when the slot does not exist', async () => {
+    prisma.slot.findUnique.mockResolvedValue(null);
+
+    await expect(service.create('missing', dto)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('throws ConflictException when the slot has already started', async () => {
+    prisma.slot.findUnique.mockResolvedValue({
+      ...futureSlot(),
+      startsAt: new Date(Date.now() - 60_000),
+    });
+
+    await expect(service.create('slot-1', dto)).rejects.toThrow(
+      new ConflictException('This slot has already started.'),
+    );
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+});

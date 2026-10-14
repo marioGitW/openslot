@@ -1,0 +1,7 @@
+{
+  "extends": "../tsconfig.json",
+  "ts-node": {
+    // Lets ts-node resolve the generated Prisma client's `.js` imports to `.ts` files.
+    "experimentalResolver": true
+  }
+}
