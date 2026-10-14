@@ -31,7 +31,7 @@ export function SiteHeader() {
                     'inline-flex h-11 items-center rounded-md px-3 text-sm font-medium transition-colors',
                     focusRing,
                     isActive
-                      ? 'text-foreground'
+                      ? 'bg-accent text-accent-foreground'
                       : 'text-muted-foreground hover:text-foreground',
                   )
                 }
