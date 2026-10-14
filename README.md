@@ -12,8 +12,12 @@ not offered to bookers.
   `calendar.freebusy` scope. It sees only busy/free times, never event titles or details.
 - `GET /slots` leaves out slots that overlap a busy time. The host view
   (`GET /slots?status=all`) keeps them and marks them "Calendar conflict".
-- Publishing a slot that overlaps a busy time returns `409`. Booking checks the
-  calendar again just before saving.
+- Publishing a slot that overlaps a busy time returns `409`, and so does moving an
+  open slot onto one (open slots can be edited; a topic-only edit skips the check).
+  Booking checks the calendar again just before saving.
+- Each conflict links to that day in Google Calendar ("View in Google Calendar"). The
+  link opens the calendar of whoever is signed in to Google, so only the host sees the
+  actual events.
 - Answers from Google are cached in memory for 60 seconds, and each call times out
   after 4 seconds.
 - **Fail open:** if Google errors or times out, slots are shown and bookings are

@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { DeleteSlotButton } from './DeleteSlotButton'
 import { EditSlotButton } from './EditSlotButton'
 import { ExpandableNote } from './ExpandableNote'
+import { GoogleCalendarLink } from './GoogleCalendarLink'
 
 const LOCKED_HINT = "Booked slots can't be deleted."
 
@@ -26,6 +27,7 @@ function CalendarConflict({ busy }: { busy: BusyTime }) {
       <p className="text-sm text-muted-foreground tabular-nums">
         Busy {formatBusyRange(busy.start, busy.end)} in Google Calendar
       </p>
+      <GoogleCalendarLink at={busy.start} />
     </div>
   )
 }

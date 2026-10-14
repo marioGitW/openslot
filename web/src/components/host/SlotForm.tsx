@@ -38,6 +38,7 @@ import {
 } from '@/lib/time'
 import type { Slot } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { GoogleCalendarLink } from './GoogleCalendarLink'
 import { StartTimeSelect } from './StartTimeSelect'
 
 interface SlotFormProps {
@@ -122,6 +123,7 @@ export function SlotForm({ slots, slot, onSaved }: SlotFormProps) {
       ? errorMessage(save.error)
       : undefined
   const timeError = errors.time?.message ?? timeConflict
+  const showCalendarLink = !!timeConflict && code === 'CALENDAR_CONFLICT'
 
   function chooseDuration(value: string) {
     // Ignore deselecting: a duration is always required.
@@ -245,6 +247,7 @@ export function SlotForm({ slots, slot, onSaved }: SlotFormProps) {
             )}
           />
           <FieldError id={`${uid}-time-error`} message={timeError} />
+          {showCalendarLink && startsAt && <GoogleCalendarLink at={startsAt} />}
         </div>
       </div>
 
