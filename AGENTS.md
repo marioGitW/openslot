@@ -6,10 +6,12 @@ truth for scope; this file covers how to work in the repo.
 
 ## Scope and priorities
 
-- **P0 – MVP (current focus):** create slots, list available slots, book a slot (name, email,
-  note), no double bookings, host overview, persistence, deployment, README.
-- **P1 – AI:** Gemini confirmation message + host prep agenda. Do not start until P0 is done.
-- **P2 – Google Calendar:** hide/block slots that clash with the host's calendar. After P1.
+All three phases are done (v1.0.0). New work is fixes and polish unless agreed otherwise.
+
+- **P0 – MVP:** create, edit and delete slots, list available slots, book a slot (name,
+  email, note), no double bookings, host overview, persistence, deployment, README.
+- **P1 – AI:** Gemini confirmation message + host prep agenda.
+- **P2 – Google Calendar:** hide/block slots that clash with the host's calendar.
 - No login, no multiple hosts, one time zone (`Europe/Skopje`). Do not add these.
 
 ## Stack
@@ -18,6 +20,7 @@ truth for scope; this file covers how to work in the repo.
   React Hook Form + Zod, date-fns.
 - `api/` – NestJS (TypeScript, CommonJS), Prisma ORM, PostgreSQL on Supabase.
 - Hosting: Vercel (two projects: `web/` and `api/`). Database: Supabase.
+- Node 24 (`engines` in both `package.json` files; CI and Vercel use the same major).
 
 ## Commands
 
@@ -25,13 +28,21 @@ Run each from its own folder.
 
 | Task | `web/` | `api/` |
 |---|---|---|
-| Install | `npm install` | `npm install` |
+| Install | `npm install` | `npm install` (runs `prisma generate`) |
 | Dev server | `npm run dev` (port 5173) | `npm run start:dev` (port 3000) |
-| Build | `npm run build` | `npm run build` |
-| Lint | `npm run lint` | `npm run lint` |
-| Test | – | `npm run test` |
-| DB migration | – | `npx prisma migrate dev --name <name>` |
+| Build | `npm run build` (needs `VITE_API_URL`) | `npm run build` |
+| Lint | `npm run lint` (ESLint) | `npm run lint` (oxlint, `.oxlintrc.json`) |
+| Unit tests | – | `npm run test` (database mocked) |
+| E2E test | – | `npm run test:e2e` (needs the database) |
+| Race test | – | `npm run test:race` (needs the API running) |
+| New migration | – | `npx prisma migrate dev --name <name>` |
+| Apply migrations | – | `npx prisma migrate deploy` (from a local machine, never in the Vercel build) |
 | Regenerate client | – | `npx prisma generate` |
+| Demo data | – | `npm run db:seed` (wipes all slots and bookings) |
+| AI text for demo data | – | `npm run ai:backfill` |
+
+CI (`.github/workflows/ci.yml`) runs lint, build and unit tests for both apps on pushes to
+`dev` and `main` and on pull requests. Keep it green.
 
 ## Code conventions
 
@@ -40,7 +51,8 @@ Run each from its own folder.
   Controllers stay thin; logic lives in services. Validate input with DTOs and
   `class-validator`. Return errors as Nest HTTP exceptions (`ConflictException`, etc.).
 - **web:** small function components, one component per file. Server state via TanStack Query
-  hooks in `src/api/`. Forms use React Hook Form + Zod. Use shadcn/ui components before
+  hooks in `src/hooks/`, all requests through `src/lib/api.ts` (which also turns every API
+  error into a readable message). Forms use React Hook Form + Zod. Use shadcn/ui components before
   writing custom ones.
 - Every async UI action needs loading, success and error states.
 - Names: `camelCase` for variables/functions, `PascalCase` for components/classes/types,
@@ -52,7 +64,8 @@ Run each from its own folder.
   catches Prisma error `P2002`, returning 409. Never replace this with a "check then insert".
 - **Slot status is derived**, not stored: booked = a Booking row exists.
 - **Times:** store UTC (`timestamptz`), display in `Europe/Skopje`.
-- **Slots** cannot be in the past and cannot overlap another slot (409).
+- **Slots** cannot be in the past and cannot overlap another slot (409). Duration is 5–240
+  minutes in steps of 5 (`api/src/slots/slot-duration.ts`, mirrored in `web/src/lib/slots.ts`).
 - **Editing:** open slots can be edited (`PUT /slots/:id`) with the same time rules,
   which only run when the time changes. Booked slots can't be edited or deleted. Bookings
   send the time the booker saw, and a mismatch returns 409.
@@ -78,10 +91,21 @@ Run each from its own folder.
     look-alikes, and keep the structured output and validation.
   - Never log the API key, prompts or raw Gemini errors; log only the failure type.
     The key stays on the server and must never reach `web/`.
+- **Security** (`api/src/main.ts`, `api/src/app.module.ts`): helmet headers, a 10 kB body
+  limit, `trust proxy` for Vercel, and rate limits (100 requests/min per IP globally,
+  10/min on writes via `@WriteThrottle()`, none on `/health`). Add `@WriteThrottle()` to
+  every new write endpoint. Error responses never include stack traces or raw
+  Prisma/Google/Gemini errors.
+- **Config:** `CORS_ORIGIN` is a comma-separated list of exact origins, required in
+  production (`NODE_ENV=production` or `VERCEL_ENV` set); localhost is only the
+  development default. The API refuses to start without `DATABASE_URL`. The web's only
+  env var is `VITE_API_URL`, and a production build fails without it.
 - **Secrets** stay in `.env` files, which are never committed. Keep `.env.example` updated
-  with every new variable (names only, no values).
-- **Database URLs:** `DATABASE_URL` = Supabase pooled connection (port 6543,
-  `?pgbouncer=true&connection_limit=1`); `DIRECT_URL` = direct connection, for migrations.
+  with every new variable, with placeholder values only, never real ones.
+- **Database URLs:** `DATABASE_URL` = Supabase transaction pooler (port 6543,
+  `?pgbouncer=true`), used at runtime with a small pool (`max: 3`, set in
+  `prisma.service.ts`); `DIRECT_URL` = Supabase session pooler (port 5432), used by the
+  Prisma CLI for migrations.
 - Do not add new dependencies without asking first.
 
 ## Git workflow
@@ -93,6 +117,8 @@ Two branches only:
 - When a milestone works on `dev`, merge `dev` into `main` with `git merge --no-ff dev`.
   That merge is a release.
 - Do not create feature, fix or other branches unless asked.
+- Once per clone: `git config core.hooksPath .githooks` (the hook strips attribution
+  trailers from commit messages).
 
 ## Commit messages
 
@@ -102,7 +128,7 @@ Conventional Commits, one line only:
 <type>(<scope>): <short summary>
 ```
 
-- Types: `feat`, `fix`, `refactor`, `style`, `docs`, `test`, `chore`.
+- Types: `feat`, `fix`, `refactor`, `style`, `docs`, `test`, `chore`, `ci`.
 - Scopes: `web`, `api`, `db`, `repo`.
 - Imperative, lowercase, no period, max 60 characters.
 - Examples: `feat(api): add slot creation endpoint`, `fix(web): refetch slots after 409`,
