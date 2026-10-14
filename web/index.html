@@ -12,6 +12,16 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
     />
     <title>OpenSlot – Book office hours</title>
+    <script>
+      // Apply the saved theme before first paint (same key as next-themes).
+      try {
+        var theme = localStorage.getItem('theme') || 'system'
+        var dark =
+          theme === 'dark' ||
+          (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

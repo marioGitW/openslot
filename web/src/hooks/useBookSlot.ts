@@ -13,7 +13,11 @@ export function useBookSlot() {
   return useMutation({
     mutationFn: ({ slotId, input }: BookSlotVariables) =>
       api.bookSlot(slotId, input),
-    // Also refetch after a 409, so the slot someone else took disappears.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: slotKeys.all }),
+    // Also refetch after a 409, so the slot someone else took disappears. Not
+    // awaited: the caller's onSuccess runs right away and can animate the booked
+    // row out before the refetch drops it.
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: slotKeys.all })
+    },
   })
 }
