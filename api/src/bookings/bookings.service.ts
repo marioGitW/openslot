@@ -3,14 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { CalendarService } from '../calendar/calendar.service';
 import { isPrismaError } from '../prisma/prisma-errors';
 import { PrismaService } from '../prisma/prisma.service';
+import { slotInterval } from '../slots/slot.mapper';
 import { BookingResponse, toBookingResponse } from './booking.mapper';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly calendar: CalendarService,
+  ) {}
 
   async create(
     slotId: string,
@@ -22,6 +27,12 @@ export class BookingsService {
     }
     if (slot.startsAt.getTime() <= Date.now()) {
       throw new ConflictException('This slot has already started.');
+    }
+    // The host's calendar may have changed since the slot was listed. Fails open:
+    // no conflict is reported when the calendar is off or unreachable.
+    const { start, end } = slotInterval(slot);
+    if (await this.calendar.findConflict(start, end)) {
+      throw new ConflictException('This time is no longer available.');
     }
 
     // No "is it booked?" pre-check: the unique constraint on Booking.slotId is the

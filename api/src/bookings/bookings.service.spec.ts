@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Prisma } from '../generated/prisma/client';
+import { CalendarService } from '../calendar/calendar.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingsService } from './bookings.service';
 
@@ -12,6 +13,7 @@ describe('BookingsService', () => {
     slot: { findUnique: jest.fn() },
     booking: { create: jest.fn(), findUnique: jest.fn() },
   };
+  const calendar = { findConflict: jest.fn() };
 
   const dto = { name: 'Ana', email: 'ana@example.com', note: 'Hi' };
   const futureSlot = () => ({
@@ -24,10 +26,12 @@ describe('BookingsService', () => {
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    calendar.findConflict.mockResolvedValue(null);
     const moduleRef = await Test.createTestingModule({
       providers: [
         BookingsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: CalendarService, useValue: calendar },
       ],
     }).compile();
     service = moduleRef.get(BookingsService);
@@ -93,5 +97,53 @@ describe('BookingsService', () => {
       new ConflictException('This slot has already started.'),
     );
     expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('throws ConflictException when the slot now clashes with the host calendar', async () => {
+    const slot = futureSlot();
+    prisma.slot.findUnique.mockResolvedValue(slot);
+    calendar.findConflict.mockResolvedValue({
+      start: slot.startsAt,
+      end: new Date(slot.startsAt.getTime() + HOUR),
+    });
+
+    await expect(service.create(slot.id, dto)).rejects.toThrow(
+      new ConflictException('This time is no longer available.'),
+    );
+    expect(calendar.findConflict).toHaveBeenCalledWith(
+      slot.startsAt,
+      new Date(slot.startsAt.getTime() + 30 * 60_000),
+    );
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it('books normally when the calendar reports no conflict (off or unreachable)', async () => {
+    const slot = futureSlot();
+    prisma.slot.findUnique.mockResolvedValue(slot);
+    calendar.findConflict.mockResolvedValue(null);
+    prisma.booking.create.mockResolvedValue({
+      id: 'booking-1',
+      slotId: slot.id,
+      ...dto,
+      aiMessage: null,
+      createdAt: new Date(),
+      slot,
+    });
+
+    await expect(service.create(slot.id, dto)).resolves.toMatchObject({
+      id: 'booking-1',
+    });
+  });
+
+  it('does not ask the calendar for a slot that has already started', async () => {
+    prisma.slot.findUnique.mockResolvedValue({
+      ...futureSlot(),
+      startsAt: new Date(Date.now() - 60_000),
+    });
+
+    await expect(service.create('slot-1', dto)).rejects.toThrow(
+      'This slot has already started.',
+    );
+    expect(calendar.findConflict).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+import { Interval } from '../common/intervals';
 import { Booking, Slot } from '../generated/prisma/client';
 
 export interface SlotBookingResponse {
@@ -16,10 +17,18 @@ export interface SlotResponse {
   durationMin: number;
   status: 'available' | 'booked';
   booking?: SlotBookingResponse;
+  /** Only for `status=all`: the first Google Calendar busy time it overlaps. */
+  calendarConflict?: Interval | null;
 }
 
 export function slotEndsAt(slot: Pick<Slot, 'startsAt' | 'durationMin'>): Date {
   return new Date(slot.startsAt.getTime() + slot.durationMin * 60_000);
+}
+
+export function slotInterval(
+  slot: Pick<Slot, 'startsAt' | 'durationMin'>,
+): Interval {
+  return { start: slot.startsAt, end: slotEndsAt(slot) };
 }
 
 /**
