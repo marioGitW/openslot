@@ -4,10 +4,10 @@ import type { DateRange } from 'react-day-picker'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { MEDIA, useMediaQuery } from '@/hooks/useMediaQuery'
 import {
   addDaysToKey,
   endOfWeekKey,
+  formatDayMonthShort,
   formatRangeShort,
   keyToPickerDate,
   pickerDateToKey,
@@ -41,10 +41,11 @@ function toPickerRange(from: string | null, to: string | null): DateRange | unde
 }
 
 export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
-  const isLg = useMediaQuery(MEDIA.lg)
   const [open, setOpen] = useState(false)
   // The range being picked while the popover is open; applied once both ends are set.
   const [draft, setDraft] = useState<DateRange | undefined>()
+  // Day under the pointer, to preview the range before the second click.
+  const [hovered, setHovered] = useState<Date | null>(null)
   const today = todayKey()
   const label = from && to ? formatRangeShort(from, to) : 'All upcoming'
 
@@ -64,8 +65,18 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
     setOpen(next)
   }
 
+  // After the first click, shade every day from the start to the hovered day.
+  const picking = draft?.from && !draft.to ? draft.from : null
+  const preview: DateRange | undefined =
+    picking && hovered
+      ? hovered < picking
+        ? { from: hovered, to: picking }
+        : { from: picking, to: hovered }
+      : undefined
+
   function pick(range: DateRange | undefined) {
     setDraft(range)
+    setHovered(null)
     if (range?.from && range.to) apply(pickerDateToKey(range.from), pickerDateToKey(range.to))
   }
 
@@ -108,7 +119,10 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
               resetOnSelect
               selected={draft}
               onSelect={pick}
-              numberOfMonths={isLg ? 2 : 1}
+              onDayMouseEnter={(day) => setHovered(day)}
+              onDayMouseLeave={() => setHovered(null)}
+              modifiers={{ preview }}
+              modifiersClassNames={{ preview: 'rounded-none bg-accent text-accent-foreground' }}
               defaultMonth={draft?.from ?? keyToPickerDate(today)}
               disabled={{ before: keyToPickerDate(today) }}
               weekStartsOn={1}
@@ -116,7 +130,9 @@ export function DateRangeFilter({ from, to, onChange }: DateRangeFilterProps) {
             />
             <div className="flex items-center justify-between gap-3 border-t p-2 md:px-3">
               <p aria-live="polite" className="text-sm text-muted-foreground">
-                {draft?.from && !draft.to ? 'Pick an end date.' : 'Pick a start date.'}
+                {picking
+                  ? `${formatDayMonthShort(pickerDateToKey(picking))} – pick an end date`
+                  : 'Pick a start date.'}
               </p>
               <Button variant="outline" size="sm" onClick={() => apply(null, null)}>
                 Clear
