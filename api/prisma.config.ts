@@ -6,6 +6,8 @@ export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: {
     path: 'prisma/migrations',
+    // Run with `npm run db:seed` (prisma db seed). Same ts-node setup as scripts/.
+    seed: 'ts-node -P scripts/tsconfig.json prisma/seed.ts',
   },
   datasource: {
     // process.env instead of env(): env() throws when unset, which would break the
