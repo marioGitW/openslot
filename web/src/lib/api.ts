@@ -8,10 +8,11 @@ import type {
   SlotStatusFilter,
 } from './types'
 
-const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replace(
-  /\/$/,
-  '',
-)
+// The localhost default is for `npm run dev` only; production builds fail without
+// VITE_API_URL (see vite.config.ts).
+const API_URL = (
+  import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '')
+).replace(/\/$/, '')
 
 export class ApiError extends Error {
   readonly status: number
