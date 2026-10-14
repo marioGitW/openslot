@@ -36,7 +36,7 @@ Run each from its own folder.
 ## Code conventions
 
 - TypeScript strict everywhere. No `any` unless there is a comment explaining why.
-- **api:** one NestJS module per domain (`slots`, `bookings`, `health`, `prisma`).
+- **api:** one NestJS module per domain (`slots`, `bookings`, `calendar`, `health`, `prisma`).
   Controllers stay thin; logic lives in services. Validate input with DTOs and
   `class-validator`. Return errors as Nest HTTP exceptions (`ConflictException`, etc.).
 - **web:** small function components, one component per file. Server state via TanStack Query
@@ -53,6 +53,16 @@ Run each from its own folder.
 - **Slot status is derived**, not stored: booked = a Booking row exists.
 - **Times:** store UTC (`timestamptz`), display in `Europe/Skopje`.
 - **Slots** cannot be in the past and cannot overlap another slot (409).
+- **Overlap** is checked with `api/src/common/intervals.ts` everywhere (slots and calendar).
+  Touching end-to-start is not an overlap.
+- **Google Calendar** (`api/src/calendar/`):
+  - Free/busy only: the service account uses the `calendar.freebusy` scope and never
+    reads event titles or details. Don't widen the scope without asking.
+  - Fail open: when the env vars are missing the feature is off, and when Google errors
+    or times out, slots are shown and bookings allowed as if there were no conflicts.
+    The calendar must never break booking.
+  - Never log credentials, the private key or raw Google client errors (they carry the
+    request headers). Log only the error message, once per failure streak.
 - **Secrets** stay in `.env` files, which are never committed. Keep `.env.example` updated
   with every new variable (names only, no values).
 - **Database URLs:** `DATABASE_URL` = Supabase pooled connection (port 6543,
