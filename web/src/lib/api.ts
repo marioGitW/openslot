@@ -1,4 +1,5 @@
 import type {
+  AiMessage,
   Booking,
   CalendarStatus,
   CreateBookingInput,
@@ -91,4 +92,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+
+  generateAiMessage: (bookingId: string) =>
+    request<AiMessage>(`/bookings/${bookingId}/ai-message`, { method: 'POST' }),
 }

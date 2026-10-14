@@ -1,10 +1,10 @@
 import { CalendarPlus, CircleCheck } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { host } from '@/config/host'
 import { downloadIcs } from '@/lib/ics'
 import { dayKeyOf, formatDayLong, formatTimeRange } from '@/lib/time'
 import type { Booking } from '@/lib/types'
+import { AiMessage } from './AiMessage'
 
 interface BookingConfirmationProps {
   booking: Booking
@@ -47,11 +47,7 @@ export function BookingConfirmation({ booking, onBookAnother }: BookingConfirmat
             <dd>{slot.topic}</dd>
           </div>
         </dl>
-        {booking.note && (
-          <p className="text-sm text-muted-foreground">
-            {host.firstName} will see your note before the call.
-          </p>
-        )}
+        <AiMessage booking={booking} />
       </div>
       <div className="flex flex-col gap-2">
         <Button variant="outline" onClick={() => downloadIcs(booking)}>

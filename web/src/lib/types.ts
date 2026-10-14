@@ -6,6 +6,8 @@ export interface SlotBooking {
   name: string
   email: string
   note: string | null
+  /** Host prep agenda written by Gemini; empty until generated */
+  aiAgenda: string[]
   createdAt: string
 }
 
@@ -46,6 +48,14 @@ export interface Booking {
   note: string | null
   createdAt: string
   slot: Slot
+}
+
+/** Confirmation text for the booker, from Gemini or the API's template. */
+export interface AiMessage {
+  message: string
+  /** Host prep agenda; empty for the fallback */
+  agenda: string[]
+  source: 'ai' | 'fallback'
 }
 
 export interface CreateSlotInput {

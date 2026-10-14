@@ -11,6 +11,7 @@ import { DeleteSlotButton } from './DeleteSlotButton'
 import { EditSlotButton } from './EditSlotButton'
 import { ExpandableNote } from './ExpandableNote'
 import { GoogleCalendarLink } from './GoogleCalendarLink'
+import { PrepAgenda } from './PrepAgenda'
 
 const LOCKED_HINT = "Booked slots can't be deleted."
 
@@ -116,6 +117,7 @@ export function HostSlotRow({ slot, onEdit }: HostSlotRowProps) {
             </a>
           </p>
           {booking.note && <ExpandableNote note={booking.note} />}
+          {booking.aiAgenda.length > 0 && <PrepAgenda items={booking.aiAgenda} />}
         </div>
       </div>
     </TimelineItem>
