@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { AddSlotForm } from '@/components/host/AddSlotForm'
+import { HostFilterBar } from '@/components/host/HostFilterBar'
 import { HostSlotList } from '@/components/host/HostSlotList'
 import { HostSlotListSkeleton } from '@/components/host/HostSlotListSkeleton'
 import { HostSummary } from '@/components/host/HostSummary'
@@ -15,15 +16,20 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { useHostFilters } from '@/hooks/useHostFilters'
 import { MEDIA, useMediaQuery } from '@/hooks/useMediaQuery'
 import { useSlots } from '@/hooks/useSlots'
+import { filterSlots } from '@/lib/slots'
 
 export function HostPage() {
   const isLg = useMediaQuery(MEDIA.lg)
   const isMd = useMediaQuery(MEDIA.md)
   const slotsQuery = useSlots('all')
   const [formOpen, setFormOpen] = useState(false)
+  const { filter, setRange, setStatus, clear } = useHostFilters()
   const slots = slotsQuery.data ?? []
+  const visibleSlots = filterSlots(slots, filter)
+  // The overlap check needs every slot, not just the filtered ones.
   const form = <AddSlotForm slots={slots} />
 
   let list
@@ -39,13 +45,25 @@ export function HostPage() {
     )
   } else if (slots.length === 0) {
     list = <EmptyState>No slots yet. Add your first one to start taking bookings.</EmptyState>
+  } else if (visibleSlots.length === 0) {
+    list = (
+      <EmptyState
+        action={
+          <Button variant="outline" onClick={clear}>
+            Clear filters
+          </Button>
+        }
+      >
+        No slots match this filter.
+      </EmptyState>
+    )
   } else {
-    list = <HostSlotList slots={slots} />
+    list = <HostSlotList slots={visibleSlots} />
   }
 
   return (
     <div className="space-y-8">
-      <HostSummary slots={slotsQuery.data} />
+      <HostSummary slots={slotsQuery.data} filter={filter} />
 
       <div className="grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)]">
         {isLg && (
@@ -67,6 +85,13 @@ export function HostPage() {
               <Plus aria-hidden />
               Add a slot
             </Button>
+          )}
+          {slots.length > 0 && (
+            <HostFilterBar
+              filter={filter}
+              onRangeChange={setRange}
+              onStatusChange={setStatus}
+            />
           )}
           {list}
         </section>

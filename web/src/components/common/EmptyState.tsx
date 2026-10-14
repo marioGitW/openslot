@@ -1,9 +1,16 @@
 import type { ReactNode } from 'react'
 
-export function EmptyState({ children }: { children: ReactNode }) {
+interface EmptyStateProps {
+  children: ReactNode
+  /** e.g. a button that clears filters */
+  action?: ReactNode
+}
+
+export function EmptyState({ children, action }: EmptyStateProps) {
   return (
-    <p className="rounded-lg border border-dashed p-6 text-muted-foreground">
-      {children}
-    </p>
+    <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-6">
+      <p className="text-muted-foreground">{children}</p>
+      {action}
+    </div>
   )
 }

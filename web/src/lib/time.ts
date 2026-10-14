@@ -71,6 +71,45 @@ export function formatDayShort(dayKey: string): string {
   return format(keyToSkopjeDate(dayKey), 'EEE d MMM')
 }
 
+/** `16 Oct` */
+export function formatDayMonthShort(dayKey: string): string {
+  return format(keyToSkopjeDate(dayKey), 'd MMM')
+}
+
+/** `14 Oct – 20 Oct`, or `14 Oct` for a single day. */
+export function formatRangeShort(from: string, to: string): string {
+  if (from === to) return formatDayMonthShort(from)
+  return `${formatDayMonthShort(from)} – ${formatDayMonthShort(to)}`
+}
+
+/** `between 14 and 20 October`, `between 28 October and 3 November` or `on 14 October`. */
+export function formatRangePhrase(from: string, to: string): string {
+  const start = keyToSkopjeDate(from)
+  const end = keyToSkopjeDate(to)
+  if (from === to) return `on ${format(start, 'd MMMM')}`
+  if (start.getFullYear() !== end.getFullYear()) {
+    return `between ${format(start, 'd MMMM yyyy')} and ${format(end, 'd MMMM yyyy')}`
+  }
+  if (start.getMonth() !== end.getMonth()) {
+    return `between ${format(start, 'd MMMM')} and ${format(end, 'd MMMM')}`
+  }
+  return `between ${format(start, 'd')} and ${format(end, 'd MMMM')}`
+}
+
+/** True for a real calendar day written as `yyyy-MM-dd`. */
+export function isDayKey(value: string | null): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [y, m, d] = keyParts(value)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d
+}
+
+/** The Sunday ending the Monday-first week that contains `dayKey`. */
+export function endOfWeekKey(dayKey: string): string {
+  const isoWeekday = Number(format(keyToSkopjeDate(dayKey), 'i'))
+  return addDaysToKey(dayKey, 7 - isoWeekday)
+}
+
 /** `Thursday` */
 export function weekdayLong(dayKey: string): string {
   return format(keyToSkopjeDate(dayKey), 'EEEE')

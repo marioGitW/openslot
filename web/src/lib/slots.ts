@@ -1,3 +1,4 @@
+import { dayKeyOf } from './time'
 import type { Slot } from './types'
 
 // Mirrors api/src/slots/slot-duration.ts.
@@ -40,4 +41,30 @@ export function findOverlap(slots: Slot[], startsAt: string, endsAt: string): Sl
   return slots.find(
     (slot) => start < Date.parse(slot.endsAt) && end > Date.parse(slot.startsAt),
   )
+}
+
+export type HostStatusFilter = 'all' | 'open' | 'booked'
+
+/** Host view filter: an inclusive Skopje day range (both null = all upcoming) and a status. */
+export interface HostFilter {
+  from: string | null
+  to: string | null
+  status: HostStatusFilter
+}
+
+export function isFiltered(filter: HostFilter): boolean {
+  return filter.from !== null || filter.status !== 'all'
+}
+
+export function filterSlots(slots: Slot[], filter: HostFilter): Slot[] {
+  return slots.filter((slot) => {
+    if (filter.status === 'open' && slot.status !== 'available') return false
+    if (filter.status === 'booked' && slot.status !== 'booked') return false
+    if (filter.from && filter.to) {
+      // Day keys compare correctly as strings.
+      const day = dayKeyOf(slot.startsAt)
+      if (day < filter.from || day > filter.to) return false
+    }
+    return true
+  })
 }
