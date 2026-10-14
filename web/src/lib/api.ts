@@ -30,6 +30,10 @@ export function isConflict(error: unknown): boolean {
   return error instanceof ApiError && error.status === 409
 }
 
+export function errorCode(error: unknown): string | undefined {
+  return error instanceof ApiError ? error.code : undefined
+}
+
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong.'
 }
