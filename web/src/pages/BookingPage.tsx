@@ -51,7 +51,8 @@ export function BookingPage() {
 
   const slotsQuery = useSlots('available', { refetchInterval: REFETCH_INTERVAL_MS })
   const bookSlot = useBookSlot()
-  // Lives here (not inside the sheet/drawer) so typed values survive closing it.
+  // Lives here (not inside the sheet/drawer) so typed values survive closing it
+  // and switching days; it is cleared only after a successful booking.
   const form = useForm<BookingFormInput, unknown, BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: emptyBookingForm,
@@ -99,7 +100,22 @@ export function BookingPage() {
     setHiddenIds((prev) => new Set(prev).add(id))
   }
 
+  /** Back to "Choose a time": the panel follows the day, typed details stay in the form. */
+  function clearSelection() {
+    bookSlot.reset()
+    setConfirmed(null)
+    setSelectedSlot(null)
+    setPanelOpen(false)
+  }
+
+  function selectDay(day: string) {
+    if (day === selectedDay) return
+    setDayChoice(day)
+    clearSelection()
+  }
+
   function goToWeek(start: string) {
+    clearSelection()
     setWeekStartChoice(start)
     setDayChoice(weekDays(start).find((day) => counts.has(day)) ?? start)
   }
@@ -127,7 +143,7 @@ export function BookingPage() {
           hideSlot(slot.id)
           setConfirmed(booking)
           setSelectedSlot(null)
-          form.reset({ name: values.name, email: values.email, note: '' })
+          form.reset(emptyBookingForm)
           if (!reducedMotion) {
             setLeavingSlot(slot)
             window.setTimeout(
@@ -141,13 +157,6 @@ export function BookingPage() {
         },
       },
     )
-  }
-
-  function closeAndReset() {
-    bookSlot.reset()
-    setConfirmed(null)
-    setSelectedSlot(null)
-    setPanelOpen(false)
   }
 
   let rail: ReactNode
@@ -193,8 +202,8 @@ export function BookingPage() {
       submitting={bookSlot.isPending}
       submitError={submitError}
       onSubmit={submit}
-      onBookAnother={closeAndReset}
-      onPickAnother={closeAndReset}
+      onBookAnother={clearSelection}
+      onPickAnother={clearSelection}
     />
   )
 
@@ -216,7 +225,7 @@ export function BookingPage() {
                 selectedDay={selectedDay}
                 counts={counts}
                 canGoPrev={daysBetweenKeys(today, weekStart) > 0}
-                onSelectDay={setDayChoice}
+                onSelectDay={selectDay}
                 onPrevWeek={() => goToWeek(addDaysToKey(weekStart, -7))}
                 onNextWeek={() => goToWeek(addDaysToKey(weekStart, 7))}
               />
