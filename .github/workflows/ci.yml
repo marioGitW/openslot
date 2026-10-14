@@ -25,8 +25,13 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      # Vercel loads the API without require(esm). Fail here if anything still
+      # require()s an ES module (NestJS 12 is ESM-only) instead of in production.
+      - run: node --no-experimental-require-module --input-type=module -e "await import('./dist/app.module.js')"
       # Unit tests mock the database. The e2e and race tests need a real one.
       - run: npm run test
+        env:
+          NODE_OPTIONS: --no-experimental-require-module
 
   web:
     runs-on: ubuntu-latest
