@@ -1,6 +1,3 @@
-export const SLOT_DURATIONS = [15, 30, 45, 60] as const
-export type SlotDuration = (typeof SLOT_DURATIONS)[number]
-
 export type SlotStatus = 'available' | 'booked'
 export type SlotStatusFilter = 'available' | 'all'
 
@@ -38,7 +35,8 @@ export interface CreateSlotInput {
   topic: string
   /** Full UTC ISO string ending in `Z` */
   startsAt: string
-  durationMin: SlotDuration
+  /** 5–240 in steps of 5 */
+  durationMin: number
 }
 
 export interface CreateBookingInput {

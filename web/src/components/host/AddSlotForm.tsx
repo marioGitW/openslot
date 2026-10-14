@@ -8,17 +8,18 @@ import { Calendar } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCreateSlot } from '@/hooks/useCreateSlot'
 import { errorMessage } from '@/lib/api'
-import { findOverlap, START_TIMES } from '@/lib/slots'
+import {
+  CUSTOM_DURATION,
+  DURATION_PRESETS,
+  DURATION_STEP_MIN,
+  findOverlap,
+  MAX_DURATION_MIN,
+  MIN_DURATION_MIN,
+  resolveDuration,
+} from '@/lib/slots'
 import { slotSchema, type SlotFormInput, type SlotFormValues } from '@/lib/slotSchema'
 import {
   addMinutesIso,
@@ -30,8 +31,9 @@ import {
   skopjeToUtcIso,
   todayKey,
 } from '@/lib/time'
-import { SLOT_DURATIONS, type Slot, type SlotDuration } from '@/lib/types'
+import type { Slot } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { StartTimeSelect } from './StartTimeSelect'
 
 interface AddSlotFormProps {
   /** Existing upcoming slots, for the instant overlap check. */
@@ -43,7 +45,13 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const form = useForm<SlotFormInput, unknown, SlotFormValues>({
     resolver: zodResolver(slotSchema),
-    defaultValues: { topic: '', date: todayKey(), time: '', duration: '30' },
+    defaultValues: {
+      topic: '',
+      date: todayKey(),
+      time: '',
+      duration: '30',
+      customDuration: '',
+    },
     mode: 'onTouched',
   })
   const {
@@ -51,29 +59,54 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
     control,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
+    setFocus,
+    clearErrors,
     formState: { errors },
   } = form
-  const [date, time, duration] = useWatch({ control, name: ['date', 'time', 'duration'] })
+  const [date, time, duration, customDuration] = useWatch({
+    control,
+    name: ['date', 'time', 'duration', 'customDuration'],
+  })
+  const durationMin = resolveDuration(duration, customDuration)
 
   const today = todayKey()
   const nowTime = nowTimeInSkopje()
   const startsAt = date && time ? skopjeToUtcIso(date, time) : null
-  const endsAt = startsAt ? addMinutesIso(startsAt, Number(duration)) : null
+  const endsAt = startsAt && durationMin ? addMinutesIso(startsAt, durationMin) : null
   const overlap = startsAt && endsAt ? findOverlap(slots, startsAt, endsAt) : undefined
 
+  function chooseDuration(value: string) {
+    // Ignore deselecting: a duration is always required.
+    if (!value) return
+    if (value === CUSTOM_DURATION) {
+      // Start from the preset that was picked, so the preview stays valid.
+      if (!getValues('customDuration') && duration !== CUSTOM_DURATION) {
+        setValue('customDuration', duration)
+      }
+      // The field only mounts after this render.
+      requestAnimationFrame(() => setFocus('customDuration', { shouldSelect: true }))
+    } else {
+      clearErrors('customDuration')
+    }
+    setValue('duration', value as SlotFormInput['duration'])
+  }
+
   function submit(values: SlotFormValues) {
-    if (overlap) return
+    const minutes = resolveDuration(values.duration, values.customDuration)
+    if (overlap || minutes === null) return
     createSlot.mutate(
       {
         topic: values.topic,
         startsAt: skopjeToUtcIso(values.date, values.time),
-        durationMin: Number(values.duration) as SlotDuration,
+        durationMin: minutes,
       },
       {
         onSuccess: () => {
           toast.success('Slot published')
           // Keep date and duration so several slots can be added in a row.
-          reset({ topic: '', date: values.date, time: '', duration: values.duration })
+          reset({ ...values, topic: '', time: '' })
         },
       },
     )
@@ -145,28 +178,15 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
             control={control}
             name="time"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger
-                  id="slot-time"
-                  className="w-full tabular-nums"
-                  aria-invalid={!!errors.time}
-                  onBlur={field.onBlur}
-                >
-                  <SelectValue placeholder="Pick a time" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {START_TIMES.map((option) => (
-                    <SelectItem
-                      key={option}
-                      value={option}
-                      className="tabular-nums"
-                      disabled={date === today && option <= nowTime}
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <StartTimeSelect
+                ref={field.ref}
+                id="slot-time"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                isDisabled={(option) => date === today && option <= nowTime}
+                invalid={!!errors.time}
+              />
             )}
           />
           {errors.time && <p className="text-sm text-destructive-text">{errors.time.message}</p>}
@@ -174,32 +194,49 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label id="slot-duration-label">Duration</Label>
-        <Controller
-          control={control}
-          name="duration"
-          render={({ field }) => (
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              aria-labelledby="slot-duration-label"
-              value={field.value}
-              // Ignore deselecting: a duration is always required.
-              onValueChange={(value) => value && field.onChange(value)}
-              className="w-full"
-            >
-              {SLOT_DURATIONS.map((option) => (
-                <ToggleGroupItem
-                  key={option}
-                  value={String(option)}
-                  className="flex-1 tabular-nums data-[state=on]:border-primary data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
-                >
-                  {option} min
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+        <Label id="slot-duration-label">Duration (minutes)</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            aria-labelledby="slot-duration-label"
+            value={duration}
+            onValueChange={chooseDuration}
+            className="flex-1"
+          >
+            {[...DURATION_PRESETS, CUSTOM_DURATION].map((option) => (
+              <ToggleGroupItem
+                key={option}
+                value={option}
+                className="flex-1 tabular-nums data-[state=on]:border-primary data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+              >
+                {option === CUSTOM_DURATION ? 'Custom' : option}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          {duration === CUSTOM_DURATION && (
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={MIN_DURATION_MIN}
+                max={MAX_DURATION_MIN}
+                step={DURATION_STEP_MIN}
+                aria-label="Custom duration in minutes"
+                aria-invalid={!!errors.customDuration}
+                aria-describedby={errors.customDuration ? 'slot-duration-error' : undefined}
+                className="w-24 tabular-nums"
+                {...register('customDuration')}
+              />
+              <span className="text-sm text-muted-foreground">minutes</span>
+            </div>
           )}
-        />
+        </div>
+        {errors.customDuration && (
+          <p id="slot-duration-error" className="text-sm text-destructive-text">
+            {errors.customDuration.message}
+          </p>
+        )}
       </div>
 
       <div aria-live="polite" className="min-h-6 space-y-1 text-sm">
@@ -208,7 +245,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
             {formatDayShort(date)}, {formatTimeRange({ startsAt, endsAt })}
           </p>
         ) : (
-          <p className="text-muted-foreground">Pick a date and start time.</p>
+          <p className="text-muted-foreground">Pick a date, start time and duration.</p>
         )}
         {overlap && (
           <p className="text-destructive-text">
