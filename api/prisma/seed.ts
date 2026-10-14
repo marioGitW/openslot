@@ -119,8 +119,8 @@ const SLOTS: SeedSlot[] = [
     durationMin: 30,
     topic: 'React performance',
     booking: {
-      name: 'Elena Dimitrova',
-      email: 'elena.dimitrova@example.com',
+      name: 'Simona Dimitrova',
+      email: 'simona.dimitrova@example.com',
       note: 'Our dashboard re-renders on every keystroke. Profiler screenshots ready.',
     },
   },
