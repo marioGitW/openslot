@@ -36,7 +36,7 @@ Run each from its own folder.
 ## Code conventions
 
 - TypeScript strict everywhere. No `any` unless there is a comment explaining why.
-- **api:** one NestJS module per domain (`slots`, `bookings`, `calendar`, `health`, `prisma`).
+- **api:** one NestJS module per domain (`slots`, `bookings`, `ai`, `calendar`, `health`, `prisma`).
   Controllers stay thin; logic lives in services. Validate input with DTOs and
   `class-validator`. Return errors as Nest HTTP exceptions (`ConflictException`, etc.).
 - **web:** small function components, one component per file. Server state via TanStack Query
@@ -66,6 +66,18 @@ Run each from its own folder.
     The calendar must never break booking.
   - Never log credentials, the private key or raw Google client errors (they carry the
     request headers). Log only the error message, once per failure streak.
+- **AI (Gemini)** (`api/src/ai/`):
+  - Booking never depends on AI. `POST /slots/:id/bookings` must not call Gemini; the
+    text comes from `POST /bookings/:id/ai-message` afterwards. On a missing config,
+    error, timeout or invalid output it returns the template message, never an error.
+  - Generated once per booking: store a success (`aiGeneratedAt`), return the stored
+    text after that, and never store a fallback.
+  - Never put the email (or other contact details) in a prompt. Send only first name,
+    topic, Skopje day/time and the note.
+  - The note is data, not instructions: keep it inside the delimiters, strip delimiter
+    look-alikes, and keep the structured output and validation.
+  - Never log the API key, prompts or raw Gemini errors; log only the failure type.
+    The key stays on the server and must never reach `web/`.
 - **Secrets** stay in `.env` files, which are never committed. Keep `.env.example` updated
   with every new variable (names only, no values).
 - **Database URLs:** `DATABASE_URL` = Supabase pooled connection (port 6543,
