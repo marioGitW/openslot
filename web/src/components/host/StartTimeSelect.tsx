@@ -1,4 +1,4 @@
-import type { FocusEvent, Ref } from 'react'
+import { useRef, type FocusEvent, type Ref } from 'react'
 import {
   Select,
   SelectContent,
@@ -26,7 +26,6 @@ interface StartTimeSelectProps {
  * first time that can still be picked and scroll the list there.
  */
 function focusFirstAvailable(event: FocusEvent<HTMLDivElement>) {
-  if (event.target !== event.currentTarget) return
   const option = event.currentTarget.querySelector<HTMLElement>(
     '[role="option"]:not([data-disabled])',
   )
@@ -47,8 +46,25 @@ export function StartTimeSelect({
   describedBy,
   ref,
 }: StartTimeSelectProps) {
+  // Radix also focuses the content whenever the pointer leaves an item (e.g. while
+  // scrolling), so only the first focus after opening may move the list.
+  const positioned = useRef(false)
+
+  function handleContentFocus(event: FocusEvent<HTMLDivElement>) {
+    if (positioned.current) return
+    positioned.current = true
+    // With a value, Radix focuses the selected item first; leave the list there.
+    if (event.target === event.currentTarget) focusFirstAvailable(event)
+  }
+
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select
+      value={value}
+      onValueChange={onChange}
+      onOpenChange={(open) => {
+        if (open) positioned.current = false
+      }}
+    >
       <SelectTrigger
         ref={ref}
         id={id}
@@ -63,7 +79,7 @@ export function StartTimeSelect({
       <SelectContent
         position="popper"
         className="max-h-60 w-(--radix-select-trigger-width) min-w-0"
-        onFocus={focusFirstAvailable}
+        onFocus={handleContentFocus}
       >
         {options.map((option) => (
           <SelectItem
