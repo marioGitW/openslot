@@ -3,7 +3,7 @@
 OpenSlot lets a single host publish office-hour slots that anyone can book in a few clicks,
 without double bookings.
 
-Live app: TODO
+Live app: todo
 API: TODO
 
 Built with React, NestJS and PostgreSQL for the TeamLift Product Engineer internship
