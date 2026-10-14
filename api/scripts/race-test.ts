@@ -80,6 +80,7 @@ async function main(): Promise<boolean> {
 main()
   .then((ok) => process.exit(ok ? 0 : 1))
   .catch((error: unknown) => {
-    console.error(error);
+    // Message only: raw client errors can carry connection details.
+    console.error(error instanceof Error ? error.message : 'Race test failed.');
     process.exit(1);
   });

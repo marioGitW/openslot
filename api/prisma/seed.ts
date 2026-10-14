@@ -6,10 +6,10 @@
  * Usage: npm run db:seed
  */
 import 'dotenv/config';
+import { TZDate } from '@date-fns/tz';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { TIME_ZONE } from '../src/common/time-zone';
 import { PrismaClient } from '../src/generated/prisma/client';
-
-const TIME_ZONE = 'Europe/Skopje';
 
 interface SeedSlot {
   dayOffset: number;
@@ -156,79 +156,38 @@ const CONFLICTS: ConflictSlot[] = [
   { weekday: 5, time: '12:15', durationMin: 30, topic: 'System design' },
 ];
 
-const partsFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: TIME_ZONE,
-  hourCycle: 'h23',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-});
-
-function skopjeParts(date: Date) {
-  const parts = Object.fromEntries(
-    partsFormatter.formatToParts(date).map((p) => [p.type, Number(p.value)]),
-  );
-  return parts as Record<
-    'year' | 'month' | 'day' | 'hour' | 'minute' | 'second',
-    number
-  >;
-}
-
-// Skopje's UTC offset at `date`, in ms (e.g. +2h in summer).
-function skopjeOffsetMs(date: Date): number {
-  const p = skopjeParts(date);
-  const asUtc = Date.UTC(
-    p.year,
-    p.month - 1,
-    p.day,
-    p.hour,
-    p.minute,
-    p.second,
-  );
-  return asUtc - Math.floor(date.getTime() / 1000) * 1000;
-}
-
-// Skopje wall-clock time → UTC instant (DST-aware).
-function skopjeToUtc(
-  year: number,
-  month: number,
-  day: number,
+// Skopje wall-clock time `dayOffset` days after `today` → UTC instant (DST-aware).
+// The Date constructor rolls day overflow over (32 October → 1 November).
+function skopjeTime(
+  today: TZDate,
+  dayOffset: number,
   hour: number,
   minute: number,
 ): Date {
-  const wallAsUtc = Date.UTC(year, month - 1, day, hour, minute);
-  const offset = skopjeOffsetMs(new Date(wallAsUtc));
-  const corrected = skopjeOffsetMs(new Date(wallAsUtc - offset));
-  return new Date(wallAsUtc - corrected);
-}
-
-type Today = ReturnType<typeof skopjeParts>;
-
-// Date.UTC normalises day overflow (e.g. 32 October → 1 November).
-function dayAfter(today: Today, dayOffset: number): Date {
-  return new Date(Date.UTC(today.year, today.month - 1, today.day + dayOffset));
-}
-
-function slotStart(today: Today, dayOffset: number, time: string): Date {
-  const day = dayAfter(today, dayOffset);
-  const [hour, minute] = time.split(':').map(Number);
-  return skopjeToUtc(
-    day.getUTCFullYear(),
-    day.getUTCMonth() + 1,
-    day.getUTCDate(),
+  const local = new TZDate(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + dayOffset,
     hour,
     minute,
+    TIME_ZONE,
   );
+  return new Date(local.getTime());
+}
+
+function slotStart(today: TZDate, dayOffset: number, time: string): Date {
+  const [hour, minute] = time.split(':').map(Number);
+  return skopjeTime(today, dayOffset, hour, minute);
 }
 
 /** Day offsets of the next `count` Monday–Friday days, starting tomorrow. */
-function nextWeekdayOffsets(today: Today, count: number): number[] {
+function nextWeekdayOffsets(today: TZDate, count: number): number[] {
   const offsets: number[] = [];
   for (let offset = 1; offsets.length < count; offset++) {
-    const weekday = dayAfter(today, offset).getUTCDay();
+    const weekday = new TZDate(
+      skopjeTime(today, offset, 12, 0).getTime(),
+      TIME_ZONE,
+    ).getDay();
     if (weekday !== 0 && weekday !== 6) offsets.push(offset);
   }
   return offsets;
@@ -240,7 +199,7 @@ async function main() {
   });
 
   try {
-    const today = skopjeParts(new Date());
+    const today = TZDate.tz(TIME_ZONE);
 
     await prisma.booking.deleteMany();
     await prisma.slot.deleteMany();
@@ -280,6 +239,7 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(error);
+  // Message only: raw client errors can carry connection details.
+  console.error(error instanceof Error ? error.message : 'Seed failed.');
   process.exit(1);
 });
