@@ -87,6 +87,21 @@ The feature is off unless both variables are set in `api/.env`:
 
 Restart the API, book a slot and the confirmation shows the AI message.
 
+### Demo data
+
+Seeded bookings start without AI text. To give them a prep agenda in the host view,
+run in `api/`:
+
+```bash
+npm run db:seed
+npm run ai:backfill
+```
+
+`ai:backfill` generates the message and agenda for every booking that doesn't have one
+yet, through the same service as the endpoint, one booking at a time with a 2-second
+pause. It is safe to re-run: bookings that fell back to the template are retried, and
+stored ones are skipped.
+
 ## Google Calendar
 
 OpenSlot can check the host's Google Calendar so that slots clashing with a meeting are

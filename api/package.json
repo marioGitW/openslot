@@ -21,7 +21,8 @@
     "test:debug": "node --experimental-vm-modules --inspect-brk node_modules/jest/bin/jest.js --runInBand",
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
     "test:race": "ts-node -P scripts/tsconfig.json scripts/race-test.ts",
-    "db:seed": "prisma db seed"
+    "db:seed": "prisma db seed",
+    "ai:backfill": "ts-node -P scripts/tsconfig.json scripts/ai-backfill.ts"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
