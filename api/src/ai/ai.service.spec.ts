@@ -1,17 +1,16 @@
+import { jest } from '@jest/globals';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiError, GoogleGenAI } from '@google/genai';
-import {
-  AiService,
-  BookingTextInput,
-  NOTE_END,
-  NOTE_START,
-  toPlainText,
-} from './ai.service';
+import type { BookingTextInput } from './ai.service.js';
 
-const mockGenerate = jest.fn();
+// Mocks return plain test objects, so async mocks are typed loosely.
+type AsyncFn = (...args: unknown[]) => Promise<unknown>;
 
-jest.mock('@google/genai', () => {
+const mockGenerate = jest.fn<AsyncFn>();
+
+// ES modules are mocked before they are imported, so the modules under test
+// are loaded with `await import` after this.
+jest.unstable_mockModule('@google/genai', () => {
   class ApiError extends Error {
     status: number;
     constructor(options: { message: string; status: number }) {
@@ -26,6 +25,10 @@ jest.mock('@google/genai', () => {
     })),
   };
 });
+
+const { ApiError, GoogleGenAI } = await import('@google/genai');
+const { AiService, NOTE_END, NOTE_START, toPlainText } =
+  await import('./ai.service.js');
 
 const API_KEY = 'AIza-test-key';
 const ENV = { GEMINI_API_KEY: API_KEY, GEMINI_MODEL: 'gemini-test-model' };
@@ -75,13 +78,17 @@ function lastRequest(): GenerateRequest {
 }
 
 describe('AiService', () => {
-  let warn: jest.SpyInstance;
-  let log: jest.SpyInstance;
+  let warn: jest.Spied<Logger['warn']>;
+  let log: jest.Spied<Logger['log']>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
   });
 
   afterEach(() => {

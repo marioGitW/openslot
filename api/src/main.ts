@@ -2,8 +2,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
-import { AppModule } from './app.module';
-import { corsOrigins, requireEnv } from './common/env';
+import { AppModule } from './app.module.js';
+import { corsOrigins, requireEnv } from './common/env.js';
 
 async function bootstrap() {
   // Fail fast with a readable message instead of a Prisma error on the first query.

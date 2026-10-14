@@ -1,14 +1,22 @@
+import { jest } from '@jest/globals';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CalendarService, normalizePrivateKey } from './calendar.service';
 
-const mockQuery = jest.fn();
+// Mocks return plain test objects, so async mocks are typed loosely.
+type AsyncFn = (...args: unknown[]) => Promise<unknown>;
+
+const mockQuery = jest.fn<AsyncFn>();
 const mockJwt = jest.fn();
 
-jest.mock('@googleapis/calendar', () => ({
+// ES modules are mocked before they are imported, so the service is loaded
+// with `await import` after this.
+jest.unstable_mockModule('@googleapis/calendar', () => ({
   auth: { JWT: jest.fn((options: unknown) => mockJwt(options)) },
   calendar: jest.fn(() => ({ freebusy: { query: mockQuery } })),
 }));
+
+const { CalendarService, normalizePrivateKey } =
+  await import('./calendar.service.js');
 
 const CALENDAR_ID = 'host@example.com';
 const ENV = {
@@ -49,12 +57,14 @@ describe('normalizePrivateKey', () => {
 });
 
 describe('CalendarService', () => {
-  let warn: jest.SpyInstance;
+  let warn: jest.Spied<Logger['warn']>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist/backfill",
+    "incremental": false,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["scripts/ai-backfill.ts"]
+}

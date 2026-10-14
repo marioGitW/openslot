@@ -1,5 +1,5 @@
-import { Interval } from '../common/intervals';
-import { Booking, Slot } from '../generated/prisma/client';
+import { Interval } from '../common/intervals.js';
+import { Booking, Slot } from '../generated/prisma/client.js';
 
 export interface SlotBookingResponse {
   id: string;

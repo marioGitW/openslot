@@ -1,15 +1,19 @@
+import { jest } from '@jest/globals';
 import { ConflictException, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { Prisma } from '../generated/prisma/client';
-import { AiService } from '../ai/ai.service';
-import { CalendarService } from '../calendar/calendar.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { BookingsService } from './bookings.service';
+import { Prisma } from '../generated/prisma/client.js';
+import { CalendarService } from '../calendar/calendar.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
-const mockGenerate = jest.fn();
+// Mocks return plain test objects, so async mocks are typed loosely.
+type AsyncFn = (...args: unknown[]) => Promise<unknown>;
 
-jest.mock('@google/genai', () => ({
+const mockGenerate = jest.fn<AsyncFn>();
+
+// ES modules are mocked before they are imported, so the modules that use
+// @google/genai are loaded with `await import` after this.
+jest.unstable_mockModule('@google/genai', () => ({
   ApiError: class extends Error {},
   // A plain class: `jest.resetAllMocks()` below would wipe a jest.fn implementation.
   GoogleGenAI: class {
@@ -17,20 +21,23 @@ jest.mock('@google/genai', () => ({
   },
 }));
 
+const { AiService } = await import('../ai/ai.service.js');
+const { BookingsService } = await import('./bookings.service.js');
+
 const HOUR = 60 * 60_000;
 
 describe('BookingsService', () => {
-  let service: BookingsService;
+  let service: InstanceType<typeof BookingsService>;
   const prisma = {
-    slot: { findUnique: jest.fn() },
+    slot: { findUnique: jest.fn<AsyncFn>() },
     booking: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      updateMany: jest.fn(),
+      create: jest.fn<AsyncFn>(),
+      findUnique: jest.fn<AsyncFn>(),
+      updateMany: jest.fn<AsyncFn>(),
     },
   };
-  const calendar = { findConflict: jest.fn() };
-  const ai = { generateBookingTexts: jest.fn() };
+  const calendar = { findConflict: jest.fn<AsyncFn>() };
+  const ai = { generateBookingTexts: jest.fn<AsyncFn>() };
 
   const dto = { name: 'Ana', email: 'ana@example.com', note: 'Hi' };
   const futureSlot = () => ({
@@ -323,7 +330,7 @@ describe('BookingsService', () => {
 
 describe('BookingsService with the real AiService', () => {
   it('never sends the booker email (or last name) to Gemini', async () => {
-    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
     mockGenerate.mockResolvedValue({
       text: JSON.stringify({
         message: 'Hi Ana, see you soon.',
@@ -339,7 +346,7 @@ describe('BookingsService with the real AiService', () => {
     };
     const prisma = {
       booking: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: jest.fn<AsyncFn>().mockResolvedValue({
           id: 'booking-1',
           slotId: slot.id,
           name: 'Ana Petrova',
@@ -351,7 +358,7 @@ describe('BookingsService with the real AiService', () => {
           createdAt: new Date(),
           slot,
         }),
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn<AsyncFn>().mockResolvedValue({ count: 1 }),
       },
     };
     const env: Record<string, string> = {

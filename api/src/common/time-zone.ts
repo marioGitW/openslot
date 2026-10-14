@@ -1,6 +1,6 @@
 import { TZDate } from '@date-fns/tz';
 import { addDays, format, startOfDay } from 'date-fns';
-import { Interval } from './intervals';
+import { Interval } from './intervals.js';
 
 /** Times are stored in UTC and shown to people in this zone. */
 export const TIME_ZONE = 'Europe/Skopje';

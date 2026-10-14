@@ -2,7 +2,7 @@ import {
   formatSkopjeRange,
   formatSkopjeSlot,
   skopjeDayWindow,
-} from './time-zone';
+} from './time-zone.js';
 
 describe('formatSkopjeRange', () => {
   it('shows Skopje times for a same-day range', () => {

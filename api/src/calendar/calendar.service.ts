@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { auth, calendar, calendar_v3 } from '@googleapis/calendar';
-import { findOverlap, Interval } from '../common/intervals';
-import { skopjeDayWindow } from '../common/time-zone';
-import { withTimeout } from '../common/timeout';
+import { findOverlap, Interval } from '../common/intervals.js';
+import { skopjeDayWindow } from '../common/time-zone.js';
+import { withTimeout } from '../common/timeout.js';
 
 // Least privilege: free/busy only, no event titles or details.
 const FREEBUSY_SCOPE = 'https://www.googleapis.com/auth/calendar.freebusy';

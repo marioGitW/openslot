@@ -1,4 +1,4 @@
-import { findOverlap, overlaps } from './intervals';
+import { findOverlap, overlaps } from './intervals.js';
 
 const at = (time: string) => new Date(`2030-01-01T${time}:00Z`);
 const range = (start: string, end: string) => ({

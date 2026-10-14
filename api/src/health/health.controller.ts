@@ -1,6 +1,6 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
-import { PrismaService } from '../prisma/prisma.service';
+import { SkipThrottle } from '../common/throttle.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 
 // Never throttled: uptime checks and the daily Vercel cron call it.
 @SkipThrottle()

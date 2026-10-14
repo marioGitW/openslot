@@ -8,8 +8,8 @@
 import 'dotenv/config';
 import { TZDate } from '@date-fns/tz';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { TIME_ZONE } from '../src/common/time-zone';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { TIME_ZONE } from '../src/common/time-zone.js';
+import { PrismaClient } from '../src/generated/prisma/client.js';
 
 interface SeedSlot {
   dayOffset: number;

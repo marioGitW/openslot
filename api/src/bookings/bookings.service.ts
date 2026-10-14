@@ -3,14 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AiService, BookingTexts } from '../ai/ai.service';
-import { CalendarService } from '../calendar/calendar.service';
-import { Booking } from '../generated/prisma/client';
-import { isPrismaError } from '../prisma/prisma-errors';
-import { PrismaService } from '../prisma/prisma.service';
-import { slotEndsAt, slotInterval } from '../slots/slot.mapper';
-import { BookingResponse, toBookingResponse } from './booking.mapper';
-import { CreateBookingDto } from './dto/create-booking.dto';
+import { AiService, BookingTexts } from '../ai/ai.service.js';
+import { CalendarService } from '../calendar/calendar.service.js';
+import { Booking } from '../generated/prisma/client.js';
+import { isPrismaError } from '../prisma/prisma-errors.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { slotEndsAt, slotInterval } from '../slots/slot.mapper.js';
+import { BookingResponse, toBookingResponse } from './booking.mapper.js';
+import { CreateBookingDto } from './dto/create-booking.dto.js';
 
 function storedAiMessage(booking: Booking): BookingTexts {
   return {
