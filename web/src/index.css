@@ -68,6 +68,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-solid: var(--destructive-solid);
+  --color-destructive-text: var(--destructive-text);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -107,6 +109,9 @@
      darker blue (≈ #2563EB). --primary stays for rings, dots and selected states. */
   --primary-solid: oklch(0.546 0.215 262.9);
   --link: oklch(0.546 0.215 262.9);
+  /* Same for red: --destructive is too light for white text or small red text. */
+  --destructive-solid: oklch(0.505 0.213 27.518);
+  --destructive-text: oklch(0.505 0.213 27.518);
 }
 
 .dark {
@@ -133,6 +138,8 @@
   /* White text still needs the darker blue; blue text on dark needs a lighter one. */
   --primary-solid: oklch(0.546 0.215 262.9);
   --link: oklch(0.7137 0.1434 254.624);
+  --destructive-solid: oklch(0.505 0.213 27.518);
+  --destructive-text: oklch(0.704 0.191 22.216);
 }
 
 @layer base {
@@ -157,4 +164,13 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Diagonal hatching for the edge strip on booked slots; token-based so it works in dark mode. */
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--muted-foreground) 45%, transparent) 0 2px,
+    transparent 2px 6px
+  );
 }

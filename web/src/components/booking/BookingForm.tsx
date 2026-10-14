@@ -56,7 +56,7 @@ export function BookingForm({
             {...register('name')}
           />
           {errors.name && (
-            <p id="booking-name-error" className="text-sm text-destructive">
+            <p id="booking-name-error" className="text-sm text-destructive-text">
               {errors.name.message}
             </p>
           )}
@@ -74,7 +74,7 @@ export function BookingForm({
             {...register('email')}
           />
           {errors.email && (
-            <p id="booking-email-error" className="text-sm text-destructive">
+            <p id="booking-email-error" className="text-sm text-destructive-text">
               {errors.email.message}
             </p>
           )}
@@ -94,12 +94,12 @@ export function BookingForm({
             {...register('note')}
           />
           <div className="flex justify-between gap-2 text-xs">
-            <span className="text-destructive">{errors.note?.message}</span>
+            <span className="text-destructive-text">{errors.note?.message}</span>
             <span
               id="booking-note-count"
               className={cn(
                 'tabular-nums',
-                note.length > NOTE_MAX ? 'text-destructive' : 'text-muted-foreground',
+                note.length > NOTE_MAX ? 'text-destructive-text' : 'text-muted-foreground',
               )}
             >
               {note.length}/{NOTE_MAX}
@@ -115,7 +115,7 @@ export function BookingForm({
         )}
       >
         {submitError && (
-          <p role="alert" className="text-sm whitespace-pre-line text-destructive">
+          <p role="alert" className="text-sm whitespace-pre-line text-destructive-text">
             {submitError}
           </p>
         )}
