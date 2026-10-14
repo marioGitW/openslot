@@ -204,6 +204,27 @@ describe('CalendarService', () => {
     });
   });
 
+  it('asks Google for whole Skopje days so busy times are not clipped', async () => {
+    mockQuery.mockResolvedValue(busyResponse([]));
+    const service = makeService();
+
+    await service.findConflict(
+      new Date('2030-01-07T09:15:00Z'),
+      new Date('2030-01-07T09:45:00Z'),
+    );
+
+    // Skopje is UTC+1 in January.
+    expect(mockQuery).toHaveBeenCalledWith(
+      {
+        requestBody: expect.objectContaining({
+          timeMin: '2030-01-06T23:00:00.000Z',
+          timeMax: '2030-01-07T23:00:00.000Z',
+        }) as unknown,
+      },
+      { timeout: 4000 },
+    );
+  });
+
   it.each([
     'GOOGLE_CALENDAR_ID',
     'GOOGLE_SERVICE_ACCOUNT_EMAIL',

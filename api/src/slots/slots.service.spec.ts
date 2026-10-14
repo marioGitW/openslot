@@ -12,7 +12,10 @@ describe('SlotsService overlap rule', () => {
   const prisma = {
     slot: { findMany: jest.fn(), create: jest.fn() },
   };
-  const calendar = { findConflict: jest.fn(), getBusyIntervals: jest.fn() };
+  const calendar = {
+    findConflict: jest.fn(),
+    getBusyIntervalsForDays: jest.fn(),
+  };
 
   // Existing slot: tomorrow 10:00–10:30 (relative to now).
   const existingStart = new Date(Date.now() + 24 * 60 * MINUTE);
@@ -30,7 +33,7 @@ describe('SlotsService overlap rule', () => {
   beforeEach(async () => {
     jest.resetAllMocks();
     calendar.findConflict.mockResolvedValue(null);
-    calendar.getBusyIntervals.mockResolvedValue({ ok: true, busy: [] });
+    calendar.getBusyIntervalsForDays.mockResolvedValue({ ok: true, busy: [] });
     prisma.slot.findMany.mockResolvedValue([existing]);
     prisma.slot.create.mockImplementation(
       ({
@@ -145,21 +148,27 @@ describe('SlotsService overlap rule', () => {
     });
 
     it('leaves slots that clash with a busy time out of the available list', async () => {
-      calendar.getBusyIntervals.mockResolvedValue({ ok: true, busy: [busy] });
+      calendar.getBusyIntervalsForDays.mockResolvedValue({
+        ok: true,
+        busy: [busy],
+      });
 
       const result = await service.list('available');
 
       expect(result.map((slot) => slot.id)).toEqual(['later']);
       // One query for the window covering every slot.
-      expect(calendar.getBusyIntervals).toHaveBeenCalledTimes(1);
-      expect(calendar.getBusyIntervals).toHaveBeenCalledWith(
+      expect(calendar.getBusyIntervalsForDays).toHaveBeenCalledTimes(1);
+      expect(calendar.getBusyIntervalsForDays).toHaveBeenCalledWith(
         existing.startsAt,
         new Date(later.startsAt.getTime() + 30 * MINUTE),
       );
     });
 
     it('annotates every slot in the full list', async () => {
-      calendar.getBusyIntervals.mockResolvedValue({ ok: true, busy: [busy] });
+      calendar.getBusyIntervalsForDays.mockResolvedValue({
+        ok: true,
+        busy: [busy],
+      });
 
       const result = await service.list('all');
 
@@ -172,7 +181,10 @@ describe('SlotsService overlap rule', () => {
     });
 
     it('lists every slot when the calendar is off or the check failed', async () => {
-      calendar.getBusyIntervals.mockResolvedValue({ ok: false, busy: [] });
+      calendar.getBusyIntervalsForDays.mockResolvedValue({
+        ok: false,
+        busy: [],
+      });
 
       const available = await service.list('available');
       const all = await service.list('all');
@@ -185,7 +197,7 @@ describe('SlotsService overlap rule', () => {
       prisma.slot.findMany.mockResolvedValue([]);
 
       await expect(service.list('available')).resolves.toEqual([]);
-      expect(calendar.getBusyIntervals).not.toHaveBeenCalled();
+      expect(calendar.getBusyIntervalsForDays).not.toHaveBeenCalled();
     });
 
     it('rejects a new slot that overlaps a busy time, showing it in Skopje time', async () => {

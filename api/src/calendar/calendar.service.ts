@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { auth, calendar, calendar_v3 } from '@googleapis/calendar';
 import { findOverlap, Interval } from '../common/intervals';
+import { skopjeDayWindow } from '../common/time-zone';
 
 // Least privilege: free/busy only, no event titles or details.
 const FREEBUSY_SCOPE = 'https://www.googleapis.com/auth/calendar.freebusy';
@@ -137,9 +138,20 @@ export class CalendarService {
     return result;
   }
 
+  /**
+   * Busy times for the whole Skopje days covering [start, end). Google clips busy
+   * periods to the requested window, so asking for whole days keeps an event's
+   * real times (10:00–10:30, not 10:15–10:30) and lets same-day checks share a
+   * cache entry.
+   */
+  getBusyIntervalsForDays(start: Date, end: Date): Promise<BusyResult> {
+    const days = skopjeDayWindow(start, end);
+    return this.getBusyIntervals(days.start, days.end);
+  }
+
   /** First busy interval overlapping [start, end), or null (also when Google fails). */
   async findConflict(start: Date, end: Date): Promise<Interval | null> {
-    const { busy } = await this.getBusyIntervals(start, end);
+    const { busy } = await this.getBusyIntervalsForDays(start, end);
     return findOverlap(busy, { start, end }) ?? null;
   }
 

@@ -94,13 +94,13 @@ export class SlotsService {
   }
 
   /**
-   * Busy times for one window covering all the slots (sorted by start). Empty when
+   * Busy times for the days covering all the slots (sorted by start). Empty when
    * the calendar is off or the check failed, so every slot stays listed.
    */
   private async busyTimesFor(slots: Slot[]): Promise<Interval[]> {
     if (slots.length === 0) return [];
     const end = Math.max(...slots.map((slot) => slotEndsAt(slot).getTime()));
-    const { busy } = await this.calendar.getBusyIntervals(
+    const { busy } = await this.calendar.getBusyIntervalsForDays(
       slots[0].startsAt,
       new Date(end),
     );
