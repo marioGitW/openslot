@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
+import { WriteThrottle } from '../common/throttle';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
@@ -16,6 +17,7 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post('slots/:id/bookings')
+  @WriteThrottle()
   create(
     @Param('id', ParseUUIDPipe) slotId: string,
     @Body() dto: CreateBookingDto,
@@ -30,6 +32,7 @@ export class BookingsController {
 
   // 200, not 201: after the first success this only returns the stored text.
   @Post('bookings/:id/ai-message')
+  @WriteThrottle()
   @HttpCode(HttpStatus.OK)
   generateAiMessage(@Param('id', ParseUUIDPipe) id: string) {
     return this.bookingsService.generateAiMessage(id);

@@ -11,6 +11,7 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { WriteThrottle } from '../common/throttle';
 import { CreateSlotDto } from './dto/create-slot.dto';
 import { ListSlotsQueryDto } from './dto/list-slots-query.dto';
 import { SlotsService } from './slots.service';
@@ -20,6 +21,7 @@ export class SlotsController {
   constructor(private readonly slotsService: SlotsService) {}
 
   @Post()
+  @WriteThrottle()
   create(@Body() dto: CreateSlotDto) {
     return this.slotsService.create(dto);
   }
@@ -30,6 +32,7 @@ export class SlotsController {
   }
 
   @Put(':id')
+  @WriteThrottle()
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateSlotDto) {
     return this.slotsService.update(id, dto);
   }
