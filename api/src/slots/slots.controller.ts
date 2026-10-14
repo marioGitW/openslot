@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { CreateSlotDto } from './dto/create-slot.dto';
@@ -26,6 +27,11 @@ export class SlotsController {
   @Get()
   list(@Query() query: ListSlotsQueryDto) {
     return this.slotsService.list(query.status);
+  }
+
+  @Put(':id')
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateSlotDto) {
+    return this.slotsService.update(id, dto);
   }
 
   @Delete(':id')

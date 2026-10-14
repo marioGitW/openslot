@@ -22,6 +22,16 @@ import {
 
 const MAX_DURATION_MS = MAX_DURATION_MIN * 60_000;
 
+// `code` lets the web tell this apart from a time conflict.
+function slotBooked(): ConflictException {
+  return new ConflictException({
+    statusCode: 409,
+    error: 'Conflict',
+    message: "A booked slot can't be edited.",
+    code: 'SLOT_BOOKED',
+  });
+}
+
 @Injectable()
 export class SlotsService {
   constructor(
@@ -31,7 +41,59 @@ export class SlotsService {
 
   async create(dto: CreateSlotDto): Promise<SlotResponse> {
     const startsAt = new Date(dto.startsAt);
-    const endsAt = slotEndsAt({ startsAt, durationMin: dto.durationMin });
+    await this.assertTimeAvailable(startsAt, dto.durationMin);
+
+    const slot = await this.prisma.slot.create({
+      data: { topic: dto.topic, startsAt, durationMin: dto.durationMin },
+    });
+    return toSlotResponse(slot, { booked: false });
+  }
+
+  /** Replaces an open slot's topic and time. Booked slots can't be edited. */
+  async update(id: string, dto: CreateSlotDto): Promise<SlotResponse> {
+    const slot = await this.prisma.slot.findUnique({
+      where: { id },
+      include: { booking: true },
+    });
+    if (!slot) {
+      throw new NotFoundException('Slot not found.');
+    }
+    if (slot.booking) {
+      throw slotBooked();
+    }
+    if (slot.startsAt.getTime() <= Date.now()) {
+      throw new ConflictException('This slot has already started.');
+    }
+
+    const startsAt = new Date(dto.startsAt);
+    // A topic-only edit keeps the time, even if it already clashes with the calendar.
+    const timeChanged =
+      startsAt.getTime() !== slot.startsAt.getTime() ||
+      dto.durationMin !== slot.durationMin;
+    if (timeChanged) {
+      await this.assertTimeAvailable(startsAt, dto.durationMin, id);
+    }
+
+    const data = { topic: dto.topic, startsAt, durationMin: dto.durationMin };
+    // The `booking: null` filter refuses the edit if a booking arrived after the
+    // check above.
+    const { count } = await this.prisma.slot.updateMany({
+      where: { id, booking: null },
+      data,
+    });
+    if (count === 0) {
+      throw slotBooked();
+    }
+    return toSlotResponse({ ...slot, ...data }, { booked: false });
+  }
+
+  /** Future, no overlap with another slot, and free in the host's calendar. */
+  private async assertTimeAvailable(
+    startsAt: Date,
+    durationMin: number,
+    excludeId?: string,
+  ): Promise<void> {
+    const endsAt = slotEndsAt({ startsAt, durationMin });
 
     if (startsAt.getTime() <= Date.now()) {
       throw new BadRequestException('Slot start time must be in the future.');
@@ -45,6 +107,7 @@ export class SlotsService {
           gte: new Date(startsAt.getTime() - MAX_DURATION_MS),
           lt: endsAt,
         },
+        ...(excludeId ? { id: { not: excludeId } } : {}),
       },
     });
     const overlap = findOverlap(candidates.map(slotInterval), {
@@ -57,15 +120,13 @@ export class SlotsService {
 
     const busy = await this.calendar.findConflict(startsAt, endsAt);
     if (busy) {
-      throw new ConflictException(
-        `This overlaps an event in your Google Calendar (${formatSkopjeRange(busy.start, busy.end)}).`,
-      );
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'Conflict',
+        message: `This overlaps an event in your Google Calendar (${formatSkopjeRange(busy.start, busy.end)}).`,
+        code: 'CALENDAR_CONFLICT',
+      });
     }
-
-    const slot = await this.prisma.slot.create({
-      data: { topic: dto.topic, startsAt, durationMin: dto.durationMin },
-    });
-    return toSlotResponse(slot, { booked: false });
   }
 
   async list(status: SlotListStatus): Promise<SlotResponse[]> {

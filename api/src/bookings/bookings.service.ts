@@ -28,6 +28,14 @@ export class BookingsService {
     if (slot.startsAt.getTime() <= Date.now()) {
       throw new ConflictException('This slot has already started.');
     }
+    // The host may have edited the slot after the booker loaded the page.
+    const moved =
+      (dto.startsAt !== undefined &&
+        new Date(dto.startsAt).getTime() !== slot.startsAt.getTime()) ||
+      (dto.durationMin !== undefined && dto.durationMin !== slot.durationMin);
+    if (moved) {
+      throw new ConflictException('This time is no longer available.');
+    }
     // The host's calendar may have changed since the slot was listed. Fails open:
     // no conflict is reported when the calendar is off or unreachable.
     const { start, end } = slotInterval(slot);

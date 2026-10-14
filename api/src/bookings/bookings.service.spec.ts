@@ -146,4 +146,42 @@ describe('BookingsService', () => {
     );
     expect(calendar.findConflict).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['start', { startsAt: new Date(Date.now() + 2 * HOUR).toISOString() }],
+    ['duration', { durationMin: 45 }],
+  ])(
+    'throws ConflictException when the host changed the %s since the booker loaded it',
+    async (_label, seen) => {
+      prisma.slot.findUnique.mockResolvedValue(futureSlot());
+
+      await expect(
+        service.create('slot-1', { ...dto, ...seen }),
+      ).rejects.toThrow(
+        new ConflictException('This time is no longer available.'),
+      );
+      expect(prisma.booking.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it('books when the seen time matches the slot', async () => {
+    const slot = futureSlot();
+    prisma.slot.findUnique.mockResolvedValue(slot);
+    prisma.booking.create.mockResolvedValue({
+      id: 'booking-1',
+      slotId: slot.id,
+      ...dto,
+      aiMessage: null,
+      createdAt: new Date(),
+      slot,
+    });
+
+    await expect(
+      service.create(slot.id, {
+        ...dto,
+        startsAt: slot.startsAt.toISOString(),
+        durationMin: slot.durationMin,
+      }),
+    ).resolves.toMatchObject({ id: 'booking-1' });
+  });
 });

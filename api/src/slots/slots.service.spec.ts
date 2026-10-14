@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { CalendarService } from '../calendar/calendar.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,7 +14,12 @@ const MINUTE = 60_000;
 describe('SlotsService overlap rule', () => {
   let service: SlotsService;
   const prisma = {
-    slot: { findMany: jest.fn(), create: jest.fn() },
+    slot: {
+      findMany: jest.fn(),
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
   const calendar = {
     findConflict: jest.fn(),
@@ -223,6 +232,17 @@ describe('SlotsService overlap rule', () => {
         new Date('2030-01-07T09:15:00Z'),
         new Date('2030-01-07T09:45:00Z'),
       );
+      await service
+        .create({
+          topic: 'New',
+          startsAt: '2030-01-07T09:15:00Z',
+          durationMin: 30,
+        })
+        .catch((error: ConflictException) => {
+          expect(error.getResponse()).toMatchObject({
+            code: 'CALENDAR_CONFLICT',
+          });
+        });
       expect(prisma.slot.create).not.toHaveBeenCalled();
     });
 
@@ -231,6 +251,149 @@ describe('SlotsService overlap rule', () => {
         service.create({ topic: 'New', startsAt: at(0), durationMin: 15 }),
       ).rejects.toThrow('This time overlaps another slot.');
       expect(calendar.findConflict).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update', () => {
+    const open = {
+      ...existing,
+      id: 'open',
+      startsAt: new Date(existingStart.getTime() + 180 * MINUTE),
+      booking: null,
+    };
+    const input = (offsetMin: number, durationMin = 30, topic = 'Renamed') => ({
+      topic,
+      startsAt: at(offsetMin),
+      durationMin,
+    });
+
+    beforeEach(() => {
+      prisma.slot.findUnique.mockResolvedValue(open);
+      prisma.slot.updateMany.mockResolvedValue({ count: 1 });
+    });
+
+    it('moves an open slot and returns the new time', async () => {
+      const result = await service.update('open', input(240, 45));
+
+      expect(result).toMatchObject({
+        id: 'open',
+        topic: 'Renamed',
+        durationMin: 45,
+        status: 'available',
+      });
+      expect(result.startsAt).toEqual(new Date(at(240)));
+      expect(prisma.slot.updateMany).toHaveBeenCalledWith({
+        where: { id: 'open', booking: null },
+        data: {
+          topic: 'Renamed',
+          startsAt: new Date(at(240)),
+          durationMin: 45,
+        },
+      });
+    });
+
+    it('ignores the slot itself in the overlap check', async () => {
+      prisma.slot.findMany.mockResolvedValue([]);
+
+      await service.update('open', input(190));
+
+      expect(prisma.slot.findMany).toHaveBeenCalledWith({
+        where: {
+          startsAt: expect.any(Object) as unknown,
+          id: { not: 'open' },
+        },
+      });
+    });
+
+    it('rejects a move onto another slot', async () => {
+      await expect(service.update('open', input(15))).rejects.toThrow(
+        'This time overlaps another slot.',
+      );
+      expect(prisma.slot.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('rejects a move into the past', async () => {
+      await expect(
+        service.update('open', {
+          topic: 'Past',
+          startsAt: new Date(Date.now() - MINUTE).toISOString(),
+          durationMin: 30,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects a move onto a Google Calendar busy time', async () => {
+      calendar.findConflict.mockResolvedValue({
+        start: new Date(at(240)),
+        end: new Date(at(270)),
+      });
+
+      const error = await service
+        .update('open', input(240))
+        .catch((e: ConflictException) => e);
+
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toMatchObject({
+        code: 'CALENDAR_CONFLICT',
+      });
+      expect(prisma.slot.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('skips the time checks for a topic-only edit', async () => {
+      calendar.findConflict.mockResolvedValue({
+        start: open.startsAt,
+        end: new Date(open.startsAt.getTime() + 30 * MINUTE),
+      });
+
+      await service.update('open', input(180, 30, 'New topic'));
+
+      expect(calendar.findConflict).not.toHaveBeenCalled();
+      expect(prisma.slot.findMany).not.toHaveBeenCalled();
+      expect(prisma.slot.updateMany).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws NotFoundException for a missing slot', async () => {
+      prisma.slot.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.update('missing', input(240)),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('refuses to edit a booked slot', async () => {
+      prisma.slot.findUnique.mockResolvedValue({
+        ...open,
+        booking: { id: 'booking-1' },
+      });
+
+      const error = await service
+        .update('open', input(240))
+        .catch((e: ConflictException) => e);
+
+      expect((error as ConflictException).getResponse()).toMatchObject({
+        message: "A booked slot can't be edited.",
+        code: 'SLOT_BOOKED',
+      });
+      expect(prisma.slot.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('refuses the edit when a booking arrives during the request', async () => {
+      prisma.slot.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.update('open', input(240))).rejects.toThrow(
+        "A booked slot can't be edited.",
+      );
+    });
+
+    it('refuses to edit a slot that has already started', async () => {
+      prisma.slot.findUnique.mockResolvedValue({
+        ...open,
+        startsAt: new Date(Date.now() - MINUTE),
+      });
+
+      await expect(service.update('open', input(240))).rejects.toThrow(
+        'This slot has already started.',
+      );
     });
   });
 });

@@ -53,6 +53,9 @@ Run each from its own folder.
 - **Slot status is derived**, not stored: booked = a Booking row exists.
 - **Times:** store UTC (`timestamptz`), display in `Europe/Skopje`.
 - **Slots** cannot be in the past and cannot overlap another slot (409).
+- **Editing:** open slots can be edited (`PUT /slots/:id`) with the same time rules,
+  which only run when the time changes. Booked slots can't be edited or deleted. Bookings
+  send the time the booker saw, and a mismatch returns 409.
 - **Overlap** is checked with `api/src/common/intervals.ts` everywhere (slots and calendar).
   Touching end-to-start is not an overlap.
 - **Google Calendar** (`api/src/calendar/`):

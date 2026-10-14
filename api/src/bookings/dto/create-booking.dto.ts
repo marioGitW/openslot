@@ -1,5 +1,7 @@
 import {
   IsEmail,
+  IsInt,
+  IsISO8601,
   IsOptional,
   IsString,
   Length,
@@ -22,4 +24,14 @@ export class CreateBookingDto {
   @IsString()
   @MaxLength(300)
   note?: string;
+
+  /** The slot's start as the booker saw it; a mismatch means the host moved it. */
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  startsAt?: string;
+
+  /** The slot's length as the booker saw it. */
+  @IsOptional()
+  @IsInt()
+  durationMin?: number;
 }
