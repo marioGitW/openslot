@@ -266,7 +266,11 @@ export function SlotForm({ slots, slot, onSaved }: SlotFormProps) {
               <ToggleGroupItem
                 key={option}
                 value={option}
-                className="flex-1 tabular-nums data-[state=on]:border-primary data-[state=on]:bg-accent data-[state=on]:text-accent-foreground"
+                className={cn(
+                  'flex-1 tabular-nums data-[state=on]:border-primary data-[state=on]:bg-accent data-[state=on]:text-accent-foreground',
+                  // Sized to its word, not squeezed to the width of the numbers.
+                  option === CUSTOM_DURATION && 'flex-none px-4',
+                )}
               >
                 {option === CUSTOM_DURATION ? 'Custom' : option}
               </ToggleGroupItem>
