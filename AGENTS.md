@@ -20,6 +20,10 @@ All three phases are done (v1.0.0). New work is fixes and polish unless agreed o
   React Hook Form + Zod, date-fns.
 - `api/` – NestJS (TypeScript, native ESM), Prisma ORM, PostgreSQL on Supabase.
 - Hosting: Vercel (two projects: `web/` and `api/`). Database: Supabase.
+- The API deploys the `nest build` output: `api/vercel.json` sets `"outputDirectory": "dist"`,
+  so Vercel runs `dist/main.js`. Keep it. Without it, Vercel recompiles `src/*.ts` and
+  type-checks with require-style module resolution, which breaks ESM default imports of
+  dual packages (e.g. `helmet`).
 - Node 24 (`engines` in both `package.json` files; CI and Vercel use the same major).
 
 ## Commands

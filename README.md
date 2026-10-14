@@ -159,7 +159,7 @@ Create two Vercel projects from this repository. Both use Node 24 (set by `engin
 | | API project | Web project |
 |---|---|---|
 | Root directory | `api` | `web` |
-| Framework | NestJS (detected from `src/main.ts`) | Vite |
+| Framework | NestJS; `api/vercel.json` sets the output directory to `dist`, so it runs the compiled `dist/main.js` | Vite |
 | Environment variables | `DATABASE_URL`, `DIRECT_URL`, `CORS_ORIGIN`, plus optional `GOOGLE_CALENDAR_ID`, `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GEMINI_API_KEY`, `GEMINI_MODEL` | `VITE_API_URL` (the API project's URL, no trailing slash) |
 
 - **CORS:** `CORS_ORIGIN` is required in production and lists exact origins, comma-separated
