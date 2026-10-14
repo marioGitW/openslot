@@ -36,6 +36,13 @@ export function formatTimeRange(slot: Pick<Slot, 'startsAt' | 'endsAt'>): string
   return `${formatTime(slot.startsAt)}–${formatTime(slot.endsAt)}`
 }
 
+/** `10:00–10:30`, or `16 Oct 00:00–17 Oct 00:00` when it spans days (e.g. all-day events). */
+export function formatBusyRange(start: string, end: string): string {
+  if (dayKeyOf(start) === dayKeyOf(end)) return `${formatTime(start)}–${formatTime(end)}`
+  const long = (iso: string) => format(toSkopje(iso), 'd MMM HH:mm')
+  return `${long(start)}–${long(end)}`
+}
+
 /** Skopje calendar day of an instant, as `yyyy-MM-dd`. */
 export function dayKeyOf(iso: string): string {
   return format(toSkopje(iso), 'yyyy-MM-dd')

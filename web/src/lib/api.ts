@@ -1,5 +1,6 @@
 import type {
   Booking,
+  CalendarStatus,
   CreateBookingInput,
   CreateSlotInput,
   Slot,
@@ -72,6 +73,8 @@ export const api = {
 
   deleteSlot: (id: string) =>
     request<void>(`/slots/${id}`, { method: 'DELETE' }),
+
+  calendarStatus: () => request<CalendarStatus>('/calendar/status'),
 
   bookSlot: (slotId: string, input: CreateBookingInput) =>
     request<Booking>(`/slots/${slotId}/bookings`, {

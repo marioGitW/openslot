@@ -74,7 +74,7 @@ export function BookingPanelContent({
             role="alert"
             className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm font-medium"
           >
-            Someone just booked this time. Pick another slot.
+            This time is no longer available. Pick another slot.
           </p>
           {layout !== 'card' && (
             <Button className="w-full" onClick={onPickAnother}>

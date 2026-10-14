@@ -3,7 +3,7 @@ import type { HostFilter, HostStatusFilter } from '@/lib/slots'
 import { isDayKey } from '@/lib/time'
 
 function parseStatus(value: string | null): HostStatusFilter {
-  return value === 'open' || value === 'booked' ? value : 'all'
+  return value === 'open' || value === 'booked' || value === 'conflicts' ? value : 'all'
 }
 
 /** Reads the filter from `?from=&to=&status=`; anything malformed falls back to "all". */

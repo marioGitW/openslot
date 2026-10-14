@@ -43,7 +43,7 @@ export function findOverlap(slots: Slot[], startsAt: string, endsAt: string): Sl
   )
 }
 
-export type HostStatusFilter = 'all' | 'open' | 'booked'
+export type HostStatusFilter = 'all' | 'open' | 'booked' | 'conflicts'
 
 /** Host view filter: an inclusive Skopje day range (both null = all upcoming) and a status. */
 export interface HostFilter {
@@ -60,6 +60,7 @@ export function filterSlots(slots: Slot[], filter: HostFilter): Slot[] {
   return slots.filter((slot) => {
     if (filter.status === 'open' && slot.status !== 'available') return false
     if (filter.status === 'booked' && slot.status !== 'booked') return false
+    if (filter.status === 'conflicts' && !slot.calendarConflict) return false
     if (filter.from && filter.to) {
       // Day keys compare correctly as strings.
       const day = dayKeyOf(slot.startsAt)

@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCreateSlot } from '@/hooks/useCreateSlot'
-import { errorMessage } from '@/lib/api'
+import { errorMessage, isConflict } from '@/lib/api'
 import {
   CUSTOM_DURATION,
   DURATION_PRESETS,
@@ -80,6 +80,16 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
   const startsAt = date && time ? skopjeToUtcIso(date, time) : null
   const endsAt = startsAt && durationMin ? addMinutesIso(startsAt, durationMin) : null
   const overlap = startsAt && endsAt ? findOverlap(slots, startsAt, endsAt) : undefined
+  // A 409 (e.g. a Google Calendar clash) belongs to the start time, and only while
+  // the rejected time is still the one picked.
+  const rejected = createSlot.variables
+  const timeConflict =
+    isConflict(createSlot.error) &&
+    rejected?.startsAt === startsAt &&
+    rejected.durationMin === durationMin
+      ? errorMessage(createSlot.error)
+      : undefined
+  const timeError = errors.time?.message ?? timeConflict
 
   function chooseDuration(value: string) {
     // Ignore deselecting: a duration is always required.
@@ -111,6 +121,9 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
           toast.success('Slot published')
           // Keep date and duration so several slots can be added in a row.
           reset({ ...values, topic: '', time: '' })
+        },
+        onError: (error) => {
+          if (isConflict(error)) setFocus('time')
         },
       },
     )
@@ -188,12 +201,12 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 isDisabled={(option) => date === today && option <= nowTime}
-                invalid={!!errors.time}
-                describedBy={errors.time ? 'slot-time-error' : undefined}
+                invalid={!!timeError}
+                describedBy={timeError ? 'slot-time-error' : undefined}
               />
             )}
           />
-          <FieldError id="slot-time-error" message={errors.time?.message} />
+          <FieldError id="slot-time-error" message={timeError} />
         </div>
       </div>
 
@@ -254,7 +267,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
         )}
       </div>
 
-      {createSlot.error && (
+      {createSlot.error && !isConflict(createSlot.error) && (
         <p role="alert" className="text-sm whitespace-pre-line text-destructive-text">
           {errorMessage(createSlot.error)}
         </p>

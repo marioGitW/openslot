@@ -18,9 +18,14 @@ function summarize(slots: Slot[], filter: HostFilter): string {
 
   const visible = filterSlots(slots, filter)
   const when = filter.from && filter.to ? ` ${formatRangePhrase(filter.from, filter.to)}` : ''
+  const conflicts = filter.status === 'conflicts'
   // Without a date range the filter still covers all upcoming slots.
-  const noun = (count: number) => `${when ? '' : 'upcoming '}${count === 1 ? 'slot' : 'slots'}`
-  const status = filter.status === 'all' ? '' : `${filter.status} `
+  const noun = (count: number) => {
+    const slots = count === 1 ? 'slot' : 'slots'
+    const suffix = !conflicts ? '' : count === 1 ? ' with a calendar conflict' : ' with calendar conflicts'
+    return `${when ? '' : 'upcoming '}${slots}${suffix}`
+  }
+  const status = filter.status === 'open' || filter.status === 'booked' ? `${filter.status} ` : ''
 
   if (visible.length === 0) return `No ${status}${noun(0)}${when}.`
   if (filter.status === 'all') {

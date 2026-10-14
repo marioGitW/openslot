@@ -1,10 +1,11 @@
-import { Lock } from 'lucide-react'
+import { CalendarX, Lock } from 'lucide-react'
 import { slotRowClass, slotRowHeight, slotTimeClass } from '@/components/slots/slotRowStyles'
 import { TimelineItem } from '@/components/slots/TimelineItem'
+import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { focusRing } from '@/lib/styles'
-import { formatTimeRange } from '@/lib/time'
-import type { Slot } from '@/lib/types'
+import { formatBusyRange, formatTimeRange } from '@/lib/time'
+import type { BusyTime, Slot } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { DeleteSlotButton } from './DeleteSlotButton'
 import { ExpandableNote } from './ExpandableNote'
@@ -14,6 +15,20 @@ const LOCKED_HINT = "Booked slots can't be deleted."
 // The gap lives inside the row so the timeline line reaches the next dot.
 const ROW_GAP = 'pb-3 last:pb-0'
 
+function CalendarConflict({ busy }: { busy: BusyTime }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-1">
+      <Badge variant="destructive" className="text-destructive-text">
+        <CalendarX aria-hidden />
+        Calendar conflict
+      </Badge>
+      <p className="text-sm text-muted-foreground tabular-nums">
+        Busy {formatBusyRange(busy.start, busy.end)} in Google Calendar
+      </p>
+    </div>
+  )
+}
+
 export function HostSlotRow({ slot }: { slot: Slot }) {
   const range = formatTimeRange(slot)
   const details = (
@@ -22,14 +37,16 @@ export function HostSlotRow({ slot }: { slot: Slot }) {
       <span className="text-muted-foreground"> · {slot.durationMin} min</span>
     </p>
   )
+  const conflict = slot.calendarConflict && <CalendarConflict busy={slot.calendarConflict} />
 
   if (!slot.booking) {
     return (
-      <TimelineItem dot="open" className={ROW_GAP}>
+      <TimelineItem dot={conflict ? 'conflict' : 'open'} className={ROW_GAP}>
         <div className={cn(slotRowClass, slotRowHeight(slot.durationMin))}>
           <div className="min-w-0 space-y-1">
             <p className={slotTimeClass}>{range}</p>
             {details}
+            {conflict}
           </div>
           <div className="-my-1.5 flex shrink-0 items-center gap-1">
             <span className="text-sm text-muted-foreground">Open</span>
@@ -75,6 +92,7 @@ export function HostSlotRow({ slot }: { slot: Slot }) {
         </div>
         <div className="mt-1 min-w-0 space-y-1 pr-2">
           {details}
+          {conflict}
           <p className="flex flex-wrap gap-x-2 pt-1 text-sm">
             <span className="font-medium">{booking.name}</span>
             {/* Wraps as a whole, and only breaks inside when it can't fit a line. */}

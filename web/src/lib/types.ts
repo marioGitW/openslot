@@ -9,6 +9,14 @@ export interface SlotBooking {
   createdAt: string
 }
 
+/** A busy time from the host's Google Calendar. */
+export interface BusyTime {
+  /** UTC ISO string */
+  start: string
+  /** UTC ISO string */
+  end: string
+}
+
 export interface Slot {
   id: string
   topic: string
@@ -20,6 +28,15 @@ export interface Slot {
   status: SlotStatus
   /** Only present for `status=all` and booked slots */
   booking?: SlotBooking
+  /** Only present for `status=all`: the first Google Calendar busy time it overlaps */
+  calendarConflict?: BusyTime | null
+}
+
+export interface CalendarStatus {
+  /** The API has Google Calendar credentials */
+  enabled: boolean
+  /** The last check against Google succeeded */
+  ok: boolean
 }
 
 export interface Booking {

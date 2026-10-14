@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ErrorState } from '@/components/common/ErrorState'
 import { AddSlotForm } from '@/components/host/AddSlotForm'
+import { CalendarStatusLine } from '@/components/host/CalendarStatusLine'
 import { HostFilterBar } from '@/components/host/HostFilterBar'
 import { HostSlotList } from '@/components/host/HostSlotList'
 import { HostSlotListSkeleton } from '@/components/host/HostSlotListSkeleton'
@@ -16,6 +17,7 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { useCalendarStatus } from '@/hooks/useCalendarStatus'
 import { useHostFilters } from '@/hooks/useHostFilters'
 import { MEDIA, useMediaQuery } from '@/hooks/useMediaQuery'
 import { useSlots } from '@/hooks/useSlots'
@@ -25,6 +27,7 @@ export function HostPage() {
   const isLg = useMediaQuery(MEDIA.lg)
   const isMd = useMediaQuery(MEDIA.md)
   const slotsQuery = useSlots('all')
+  const calendarStatus = useCalendarStatus().data
   const [formOpen, setFormOpen] = useState(false)
   const { filter, setRange, setStatus, clear } = useHostFilters()
   const slots = slotsQuery.data ?? []
@@ -63,7 +66,10 @@ export function HostPage() {
 
   return (
     <div className="space-y-8">
-      <HostSummary slots={slotsQuery.data} filter={filter} />
+      <div className="space-y-3">
+        <HostSummary slots={slotsQuery.data} filter={filter} />
+        <CalendarStatusLine status={calendarStatus} />
+      </div>
 
       <div className="grid gap-10 lg:grid-cols-[360px_minmax(0,1fr)]">
         {isLg && (
@@ -89,6 +95,7 @@ export function HostPage() {
           {slots.length > 0 && (
             <HostFilterBar
               filter={filter}
+              showConflicts={calendarStatus?.enabled === true}
               onRangeChange={setRange}
               onStatusChange={setStatus}
             />

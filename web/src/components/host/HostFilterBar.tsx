@@ -6,16 +6,27 @@ const STATUS_OPTIONS: { value: HostStatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'open', label: 'Open' },
   { value: 'booked', label: 'Booked' },
+  { value: 'conflicts', label: 'Conflicts' },
 ]
 
 interface HostFilterBarProps {
   filter: HostFilter
+  /** Offer "Conflicts" only when Google Calendar is connected. */
+  showConflicts: boolean
   onRangeChange: (from: string | null, to: string | null) => void
   onStatusChange: (status: HostStatusFilter) => void
 }
 
 /** Wraps to two lines on narrow screens: date range first, status below. */
-export function HostFilterBar({ filter, onRangeChange, onStatusChange }: HostFilterBarProps) {
+export function HostFilterBar({
+  filter,
+  showConflicts,
+  onRangeChange,
+  onStatusChange,
+}: HostFilterBarProps) {
+  const options = STATUS_OPTIONS.filter(
+    (option) => showConflicts || option.value !== 'conflicts',
+  )
   return (
     <div role="group" aria-label="Filter slots" className="flex flex-wrap items-center gap-2">
       <DateRangeFilter from={filter.from} to={filter.to} onChange={onRangeChange} />
@@ -27,7 +38,7 @@ export function HostFilterBar({ filter, onRangeChange, onStatusChange }: HostFil
         // Ignore deselecting: one status is always active.
         onValueChange={(value) => value && onStatusChange(value as HostStatusFilter)}
       >
-        {STATUS_OPTIONS.map((option) => (
+        {options.map((option) => (
           <ToggleGroupItem
             key={option.value}
             value={option.value}

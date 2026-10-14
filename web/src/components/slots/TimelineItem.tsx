@@ -2,10 +2,11 @@ import type { ComponentProps } from 'react'
 import { cn } from '@/lib/utils'
 import { timelineDotY } from './slotRowStyles'
 
-export type TimelineDot = 'open' | 'selected' | 'booked'
+export type TimelineDot = 'open' | 'conflict' | 'selected' | 'booked'
 
 const DOT_CLASS: Record<TimelineDot, string> = {
   open: 'border-primary bg-background',
+  conflict: 'border-destructive bg-background',
   selected: 'border-primary bg-primary',
   booked: 'border-muted-foreground bg-muted-foreground',
 }
