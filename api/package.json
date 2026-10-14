@@ -24,6 +24,8 @@
     "db:seed": "prisma db seed"
   },
   "dependencies": {
+    "@date-fns/tz": "^1.5.0",
+    "@googleapis/calendar": "^20.1.0",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.0.1",
@@ -32,6 +34,7 @@
     "@prisma/client": "^7.10.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "date-fns": "^4.4.0",
     "dotenv": "^18.0.7",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { findOverlap } from '../common/intervals';
 import { isPrismaError } from '../prisma/prisma-errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSlotDto } from './dto/create-slot.dto';
@@ -35,11 +36,14 @@ export class SlotsService {
         },
       },
     });
-    const overlaps = candidates.some(
-      (existing) =>
-        startsAt < slotEndsAt(existing) && endsAt > existing.startsAt,
+    const overlap = findOverlap(
+      candidates.map((existing) => ({
+        start: existing.startsAt,
+        end: slotEndsAt(existing),
+      })),
+      { start: startsAt, end: endsAt },
     );
-    if (overlaps) {
+    if (overlap) {
       throw new ConflictException('This time overlaps another slot.');
     }
 
