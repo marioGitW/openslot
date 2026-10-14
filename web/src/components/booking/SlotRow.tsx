@@ -37,7 +37,7 @@ export function SlotRow({ slot, selected, onSelect }: SlotRowProps) {
       {/* Looks like a ghost button; the whole row is the actual button. */}
       <span
         aria-hidden
-        className="hidden h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-link md:inline-flex"
+        className="-my-1.5 hidden h-11 shrink-0 items-center rounded-md px-3 text-sm font-medium text-link md:inline-flex"
       >
         Book
       </span>

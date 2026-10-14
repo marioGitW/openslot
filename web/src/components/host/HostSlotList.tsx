@@ -12,7 +12,7 @@ export function HostSlotList({ slots }: { slots: Slot[] }) {
           <h2 id={`day-${day}`} className="text-base font-semibold tracking-tight">
             {formatDayLong(day)}
           </h2>
-          <ul className="space-y-3">
+          <ul>
             {daySlots.map((slot) => (
               <HostSlotRow key={slot.id} slot={slot} />
             ))}

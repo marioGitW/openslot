@@ -1,3 +1,4 @@
+import { TimelineItem } from '@/components/slots/TimelineItem'
 import type { Slot } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { SlotRow } from './SlotRow'
@@ -19,15 +20,15 @@ export function TimeRail({
   onSelect,
 }: TimeRailProps) {
   return (
-    <ol
-      aria-label={label}
-      className="relative pl-5 before:absolute before:top-2 before:bottom-5 before:left-1.5 before:w-px before:bg-border"
-    >
+    // Cards sit 2px into each row (room for the selected ring), so the dots do too.
+    <ol aria-label={label} className="[--card-top:2px]">
       {slots.map((slot) => {
         const leaving = slot.id === leavingSlotId
+        const selected = slot.id === selectedSlotId
         return (
-          <li
+          <TimelineItem
             key={slot.id}
+            dot={selected ? 'selected' : 'open'}
             aria-hidden={leaving || undefined}
             className={cn(
               // The only animation on the page; the global reduced-motion rule
@@ -37,13 +38,9 @@ export function TimeRail({
             )}
           >
             <div className="min-h-0 overflow-hidden p-0.5 pb-3">
-              <SlotRow
-                slot={slot}
-                selected={slot.id === selectedSlotId}
-                onSelect={onSelect}
-              />
+              <SlotRow slot={slot} selected={selected} onSelect={onSelect} />
             </div>
-          </li>
+          </TimelineItem>
         )
       })}
     </ol>
