@@ -1,4 +1,8 @@
-import { formatSkopjeRange, skopjeDayWindow } from './time-zone';
+import {
+  formatSkopjeRange,
+  formatSkopjeSlot,
+  skopjeDayWindow,
+} from './time-zone';
 
 describe('formatSkopjeRange', () => {
   it('shows Skopje times for a same-day range', () => {
@@ -45,5 +49,16 @@ describe('skopjeDayWindow', () => {
       start: new Date('2026-10-24T22:00:00Z'),
       end: new Date('2026-10-25T23:00:00Z'),
     });
+  });
+});
+
+describe('formatSkopjeSlot', () => {
+  it('shows the Skopje day and time range', () => {
+    expect(
+      formatSkopjeSlot(
+        new Date('2026-10-17T06:30:00Z'),
+        new Date('2026-10-17T07:30:00Z'),
+      ),
+    ).toBe('Saturday 17 October, 08:30–09:30');
   });
 });

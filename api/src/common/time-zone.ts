@@ -12,9 +12,9 @@ export function skopjeDayWindow(start: Date, end: Date): Interval {
   return { start: new Date(from.getTime()), end: new Date(to.getTime()) };
 }
 
-/** `Thursday, 15 October` in Skopje. */
+/** `Thursday 15 October` in Skopje. */
 export function formatSkopjeDay(date: Date): string {
-  return format(new TZDate(date.getTime(), TIME_ZONE), 'EEEE, d MMMM');
+  return format(new TZDate(date.getTime(), TIME_ZONE), 'EEEE d MMMM');
 }
 
 /** `10:00` in Skopje. */
@@ -29,4 +29,9 @@ export function formatSkopjeRange(start: Date, end: Date): string {
   const sameDay = format(from, 'yyyy-MM-dd') === format(to, 'yyyy-MM-dd');
   const pattern = sameDay ? 'HH:mm' : 'd MMM HH:mm';
   return `${format(from, pattern)}–${format(to, pattern)}`;
+}
+
+/** `Saturday 17 October, 08:30–09:30` in Skopje. */
+export function formatSkopjeSlot(start: Date, end: Date): string {
+  return `${formatSkopjeDay(start)}, ${formatSkopjeRange(start, end)}`;
 }
