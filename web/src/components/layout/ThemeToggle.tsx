@@ -1,37 +1,25 @@
-import { Moon, Sun, SunMoon } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 
-const ORDER = ['light', 'dark', 'system'] as const
-type ThemeChoice = (typeof ORDER)[number]
-
-const LABELS: Record<ThemeChoice, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  system: 'System',
-}
-
-const ICONS: Record<ThemeChoice, typeof Sun> = {
-  light: Sun,
-  dark: Moon,
-  system: SunMoon,
-}
-
-function toChoice(theme: string | undefined): ThemeChoice {
-  return theme === 'light' || theme === 'dark' ? theme : 'system'
-}
-
 interface ThemeToggleProps {
-  /** Show "Theme: Dark" next to the icon (used in the mobile menu). */
+  /** Show the label next to the icon (used in the mobile menu). */
   showLabel?: boolean
 }
 
+/**
+ * Two states. Until the first click the stored theme is "system" and the OS decides;
+ * each click switches to the opposite of what is shown and saves it.
+ */
 export function ThemeToggle({ showLabel = false }: ThemeToggleProps) {
-  const { theme, setTheme } = useTheme()
-  const current = toChoice(theme)
-  const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length]
-  const Icon = ICONS[current]
-  const label = `Theme: ${LABELS[current]}. Switch to ${LABELS[next].toLowerCase()}.`
+  const { resolvedTheme, setTheme } = useTheme()
+  // resolvedTheme can be undefined for a moment; the pre-paint class is the truth then.
+  const isDark = resolvedTheme
+    ? resolvedTheme === 'dark'
+    : document.documentElement.classList.contains('dark')
+  const next = isDark ? 'light' : 'dark'
+  const Icon = isDark ? Sun : Moon
+  const label = `Switch to ${next} theme`
 
   if (showLabel) {
     return (
@@ -39,10 +27,9 @@ export function ThemeToggle({ showLabel = false }: ThemeToggleProps) {
         variant="ghost"
         className="h-12 w-full justify-start gap-3 px-3 text-base font-normal"
         onClick={() => setTheme(next)}
-        aria-label={label}
       >
         <Icon className="size-5" aria-hidden />
-        Theme: {LABELS[current]}
+        {label}
       </Button>
     )
   }
