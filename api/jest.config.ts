@@ -22,11 +22,8 @@ const config: Config = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
     ...pathsToModuleNameMapper(paths, { prefix: '<rootDir>/' }),
   },
-  collectCoverageFrom: [
-    'src/**/*.(t|j)s',
-    'libs/**/*.(t|j)s',
-    'apps/**/*.(t|j)s',
-  ],
+  // Hand-written code only; the Prisma client is generated.
+  collectCoverageFrom: ['src/**/*.ts', '!src/generated/**', '!src/main.ts'],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
 };
