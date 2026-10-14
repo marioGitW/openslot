@@ -43,6 +43,12 @@ export function formatBusyRange(start: string, end: string): string {
   return `${long(start)}–${long(end)}`
 }
 
+/** The host's Google Calendar day view for the Skopje day of `iso`. */
+export function googleCalendarDayUrl(iso: string): string {
+  const day = format(toSkopje(iso), 'yyyy/M/d')
+  return `https://calendar.google.com/calendar/r/day/${day}`
+}
+
 /** Skopje calendar day of an instant, as `yyyy-MM-dd`. */
 export function dayKeyOf(iso: string): string {
   return format(toSkopje(iso), 'yyyy-MM-dd')

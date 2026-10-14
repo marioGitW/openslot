@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { CalendarIcon, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { FieldError } from '@/components/common/FieldError'
@@ -11,7 +11,8 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCreateSlot } from '@/hooks/useCreateSlot'
-import { errorMessage, isConflict } from '@/lib/api'
+import { useUpdateSlot } from '@/hooks/useUpdateSlot'
+import { ApiError, errorMessage, isConflict } from '@/lib/api'
 import {
   CUSTOM_DURATION,
   DURATION_PRESETS,
@@ -20,11 +21,14 @@ import {
   MAX_DURATION_MIN,
   MIN_DURATION_MIN,
   resolveDuration,
+  START_TIMES,
 } from '@/lib/slots'
 import { slotSchema, type SlotFormInput, type SlotFormValues } from '@/lib/slotSchema'
 import {
   addMinutesIso,
+  dayKeyOf,
   formatDayShort,
+  formatTime,
   formatTimeRange,
   keyToPickerDate,
   nowTimeInSkopje,
@@ -36,23 +40,48 @@ import type { Slot } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { StartTimeSelect } from './StartTimeSelect'
 
-interface AddSlotFormProps {
+interface SlotFormProps {
   /** Existing upcoming slots, for the instant overlap check. */
   slots: Slot[]
+  /** An open slot to edit; without it the form adds a new slot. */
+  slot?: Slot
+  /** Called after an edit is saved. */
+  onSaved?: () => void
 }
 
-export function AddSlotForm({ slots }: AddSlotFormProps) {
+function defaultValuesFor(slot: Slot | undefined): SlotFormInput {
+  if (!slot) {
+    return { topic: '', date: todayKey(), time: '', duration: '30', customDuration: '' }
+  }
+  const preset = DURATION_PRESETS.find((option) => Number(option) === slot.durationMin)
+  return {
+    topic: slot.topic,
+    date: dayKeyOf(slot.startsAt),
+    time: formatTime(slot.startsAt),
+    duration: preset ?? CUSTOM_DURATION,
+    customDuration: preset ? '' : String(slot.durationMin),
+  }
+}
+
+function errorCode(error: unknown): string | undefined {
+  return error instanceof ApiError ? error.code : undefined
+}
+
+export function SlotForm({ slots, slot, onSaved }: SlotFormProps) {
+  const uid = useId()
   const createSlot = useCreateSlot()
+  const updateSlot = useUpdateSlot(slot?.id ?? '')
+  const save = slot ? updateSlot : createSlot
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [initialValues] = useState(() => defaultValuesFor(slot))
+  // Slots created through the API may start off the 15-minute grid.
+  const startTimes =
+    initialValues.time && !START_TIMES.includes(initialValues.time)
+      ? [...START_TIMES, initialValues.time].sort()
+      : START_TIMES
   const form = useForm<SlotFormInput, unknown, SlotFormValues>({
     resolver: zodResolver(slotSchema),
-    defaultValues: {
-      topic: '',
-      date: todayKey(),
-      time: '',
-      duration: '30',
-      customDuration: '',
-    },
+    defaultValues: initialValues,
     // Errors appear once a field is left, then update live while it's fixed.
     mode: 'onTouched',
     reValidateMode: 'onChange',
@@ -79,15 +108,18 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
   const nowTime = nowTimeInSkopje()
   const startsAt = date && time ? skopjeToUtcIso(date, time) : null
   const endsAt = startsAt && durationMin ? addMinutesIso(startsAt, durationMin) : null
-  const overlap = startsAt && endsAt ? findOverlap(slots, startsAt, endsAt) : undefined
-  // A 409 (e.g. a Google Calendar clash) belongs to the start time, and only while
-  // the rejected time is still the one picked.
-  const rejected = createSlot.variables
+  // The slot being edited may keep (or overlap) its own current time.
+  const otherSlots = slot ? slots.filter((other) => other.id !== slot.id) : slots
+  const overlap = startsAt && endsAt ? findOverlap(otherSlots, startsAt, endsAt) : undefined
+  // A time 409 (e.g. a Google Calendar clash) belongs to the start time, and only
+  // while the rejected time is still the one picked. "Already booked" is not about
+  // the time, so it stays a form-level error.
+  const code = errorCode(save.error)
+  const timeConflictError = isConflict(save.error) && code !== 'SLOT_BOOKED'
+  const rejected = save.variables
   const timeConflict =
-    isConflict(createSlot.error) &&
-    rejected?.startsAt === startsAt &&
-    rejected.durationMin === durationMin
-      ? errorMessage(createSlot.error)
+    timeConflictError && rejected?.startsAt === startsAt && rejected.durationMin === durationMin
+      ? errorMessage(save.error)
       : undefined
   const timeError = errors.time?.message ?? timeConflict
 
@@ -110,7 +142,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
   function submit(values: SlotFormValues) {
     const minutes = resolveDuration(values.duration, values.customDuration)
     if (overlap || minutes === null) return
-    createSlot.mutate(
+    save.mutate(
       {
         topic: values.topic,
         startsAt: skopjeToUtcIso(values.date, values.time),
@@ -118,12 +150,17 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
       },
       {
         onSuccess: () => {
+          if (slot) {
+            toast.success('Slot updated')
+            onSaved?.()
+            return
+          }
           toast.success('Slot published')
           // Keep date and duration so several slots can be added in a row.
           reset({ ...values, topic: '', time: '' })
         },
         onError: (error) => {
-          if (isConflict(error)) setFocus('time')
+          if (isConflict(error) && errorCode(error) !== 'SLOT_BOOKED') setFocus('time')
         },
       },
     )
@@ -132,20 +169,20 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
   return (
     <form noValidate onSubmit={handleSubmit(submit)} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="slot-topic">Topic</Label>
+        <Label htmlFor={`${uid}-topic`}>Topic</Label>
         <Input
-          id="slot-topic"
+          id={`${uid}-topic`}
           placeholder="e.g. Code review"
           aria-invalid={!!errors.topic}
-          aria-describedby={errors.topic ? 'slot-topic-error' : undefined}
+          aria-describedby={errors.topic ? `${uid}-topic-error` : undefined}
           {...register('topic')}
         />
-        <FieldError id="slot-topic-error" message={errors.topic?.message} />
+        <FieldError id={`${uid}-topic-error`} message={errors.topic?.message} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
         <div className="space-y-2">
-          <Label htmlFor="slot-date">Date</Label>
+          <Label htmlFor={`${uid}-date`}>Date</Label>
           <Controller
             control={control}
             name="date"
@@ -154,14 +191,14 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
                 <PopoverTrigger asChild>
                   <Button
                     ref={field.ref}
-                    id="slot-date"
+                    id={`${uid}-date`}
                     variant="outline"
                     className={cn(
                       'w-full justify-start font-normal',
                       !field.value && 'text-muted-foreground',
                     )}
                     aria-invalid={!!errors.date}
-                    aria-describedby={errors.date ? 'slot-date-error' : undefined}
+                    aria-describedby={errors.date ? `${uid}-date-error` : undefined}
                     onBlur={field.onBlur}
                   >
                     <CalendarIcon aria-hidden />
@@ -185,38 +222,39 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
               </Popover>
             )}
           />
-          <FieldError id="slot-date-error" message={errors.date?.message} />
+          <FieldError id={`${uid}-date-error`} message={errors.date?.message} />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="slot-time">Start time</Label>
+          <Label htmlFor={`${uid}-time`}>Start time</Label>
           <Controller
             control={control}
             name="time"
             render={({ field }) => (
               <StartTimeSelect
                 ref={field.ref}
-                id="slot-time"
+                id={`${uid}-time`}
                 value={field.value}
+                options={startTimes}
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 isDisabled={(option) => date === today && option <= nowTime}
                 invalid={!!timeError}
-                describedBy={timeError ? 'slot-time-error' : undefined}
+                describedBy={timeError ? `${uid}-time-error` : undefined}
               />
             )}
           />
-          <FieldError id="slot-time-error" message={timeError} />
+          <FieldError id={`${uid}-time-error`} message={timeError} />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label id="slot-duration-label">Duration (minutes)</Label>
+        <Label id={`${uid}-duration-label`}>Duration (minutes)</Label>
         <div className="flex flex-wrap items-center gap-2">
           <ToggleGroup
             type="single"
             variant="outline"
-            aria-labelledby="slot-duration-label"
+            aria-labelledby={`${uid}-duration-label`}
             value={duration}
             onValueChange={chooseDuration}
             className="flex-1"
@@ -241,7 +279,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
                 step={DURATION_STEP_MIN}
                 aria-label="Custom duration in minutes"
                 aria-invalid={!!errors.customDuration}
-                aria-describedby={errors.customDuration ? 'slot-duration-error' : undefined}
+                aria-describedby={errors.customDuration ? `${uid}-duration-error` : undefined}
                 className="w-24 tabular-nums"
                 {...register('customDuration')}
               />
@@ -249,7 +287,7 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
             </div>
           )}
         </div>
-        <FieldError id="slot-duration-error" message={errors.customDuration?.message} />
+        <FieldError id={`${uid}-duration-error`} message={errors.customDuration?.message} />
       </div>
 
       <div aria-live="polite" className="min-h-6 space-y-1 text-sm">
@@ -267,20 +305,20 @@ export function AddSlotForm({ slots }: AddSlotFormProps) {
         )}
       </div>
 
-      {createSlot.error && !isConflict(createSlot.error) && (
+      {save.error && !timeConflictError && (
         <p role="alert" className="text-sm whitespace-pre-line text-destructive-text">
-          {errorMessage(createSlot.error)}
+          {errorMessage(save.error)}
         </p>
       )}
 
       <Button
         type="submit"
         className="w-full"
-        disabled={createSlot.isPending || !!overlap}
-        aria-busy={createSlot.isPending}
+        disabled={save.isPending || !!overlap}
+        aria-busy={save.isPending}
       >
-        {createSlot.isPending && <Loader2 className="motion-safe:animate-spin" aria-hidden />}
-        Publish slot
+        {save.isPending && <Loader2 className="motion-safe:animate-spin" aria-hidden />}
+        {slot ? 'Save changes' : 'Publish slot'}
       </Button>
     </form>
   )

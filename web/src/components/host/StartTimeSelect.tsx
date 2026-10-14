@@ -6,11 +6,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { START_TIMES } from '@/lib/slots'
 
 interface StartTimeSelectProps {
   id: string
   value: string
+  /** `HH:mm` times to offer, in order. */
+  options: string[]
   onChange: (value: string) => void
   onBlur: () => void
   /** Times that can't be picked, e.g. ones already past today. */
@@ -38,6 +39,7 @@ function focusFirstAvailable(event: FocusEvent<HTMLDivElement>) {
 export function StartTimeSelect({
   id,
   value,
+  options,
   onChange,
   onBlur,
   isDisabled,
@@ -63,7 +65,7 @@ export function StartTimeSelect({
         className="max-h-60 w-(--radix-select-trigger-width) min-w-0"
         onFocus={focusFirstAvailable}
       >
-        {START_TIMES.map((option) => (
+        {options.map((option) => (
           <SelectItem
             key={option}
             value={option}

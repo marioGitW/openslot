@@ -60,4 +60,7 @@ export interface CreateBookingInput {
   name: string
   email: string
   note?: string
+  /** The slot's time as the booker saw it; the API refuses if the host changed it. */
+  startsAt?: string
+  durationMin?: number
 }

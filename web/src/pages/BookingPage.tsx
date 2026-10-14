@@ -142,7 +142,13 @@ export function BookingPage() {
     bookSlot.mutate(
       {
         slotId: slot.id,
-        input: { name: values.name, email: values.email, note: values.note || undefined },
+        input: {
+          name: values.name,
+          email: values.email,
+          note: values.note || undefined,
+          startsAt: slot.startsAt,
+          durationMin: slot.durationMin,
+        },
       },
       {
         onSuccess: (booking) => {

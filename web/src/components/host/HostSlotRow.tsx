@@ -8,6 +8,7 @@ import { formatBusyRange, formatTimeRange } from '@/lib/time'
 import type { BusyTime, Slot } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { DeleteSlotButton } from './DeleteSlotButton'
+import { EditSlotButton } from './EditSlotButton'
 import { ExpandableNote } from './ExpandableNote'
 
 const LOCKED_HINT = "Booked slots can't be deleted."
@@ -29,7 +30,12 @@ function CalendarConflict({ busy }: { busy: BusyTime }) {
   )
 }
 
-export function HostSlotRow({ slot }: { slot: Slot }) {
+interface HostSlotRowProps {
+  slot: Slot
+  onEdit: (slot: Slot) => void
+}
+
+export function HostSlotRow({ slot, onEdit }: HostSlotRowProps) {
   const range = formatTimeRange(slot)
   const details = (
     <p className="text-sm">
@@ -50,6 +56,7 @@ export function HostSlotRow({ slot }: { slot: Slot }) {
           </div>
           <div className="-my-1.5 flex shrink-0 items-center gap-1">
             <span className="text-sm text-muted-foreground">Open</span>
+            <EditSlotButton slot={slot} onEdit={onEdit} />
             <DeleteSlotButton slot={slot} />
           </div>
         </div>

@@ -2,7 +2,12 @@ import { formatDayLong, groupSlotsByDay } from '@/lib/time'
 import type { Slot } from '@/lib/types'
 import { HostSlotRow } from './HostSlotRow'
 
-export function HostSlotList({ slots }: { slots: Slot[] }) {
+interface HostSlotListProps {
+  slots: Slot[]
+  onEdit: (slot: Slot) => void
+}
+
+export function HostSlotList({ slots, onEdit }: HostSlotListProps) {
   const days = [...groupSlotsByDay(slots)]
 
   return (
@@ -14,7 +19,7 @@ export function HostSlotList({ slots }: { slots: Slot[] }) {
           </h2>
           <ul>
             {daySlots.map((slot) => (
-              <HostSlotRow key={slot.id} slot={slot} />
+              <HostSlotRow key={slot.id} slot={slot} onEdit={onEdit} />
             ))}
           </ul>
         </section>

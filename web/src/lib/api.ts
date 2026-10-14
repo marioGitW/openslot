@@ -14,11 +14,14 @@ const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000').replac
 
 export class ApiError extends Error {
   readonly status: number
+  /** Set by the API on some errors, e.g. `CALENDAR_CONFLICT` or `SLOT_BOOKED`. */
+  readonly code?: string
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -33,6 +36,7 @@ export function errorMessage(error: unknown): string {
 interface ErrorBody {
   message?: string | string[]
   error?: string
+  code?: string
 }
 
 // Our own errors carry a string message; DTO validation errors carry an array.
@@ -60,7 +64,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (res.status === 204) return undefined as T
 
   const body: unknown = await res.json().catch(() => null)
-  if (!res.ok) throw new ApiError(res.status, readErrorMessage(body, res.status))
+  if (!res.ok) {
+    const { code } = (body ?? {}) as ErrorBody
+    throw new ApiError(res.status, readErrorMessage(body, res.status), code)
+  }
   return body as T
 }
 
@@ -70,6 +77,9 @@ export const api = {
 
   createSlot: (input: CreateSlotInput) =>
     request<Slot>('/slots', { method: 'POST', body: JSON.stringify(input) }),
+
+  updateSlot: (id: string, input: CreateSlotInput) =>
+    request<Slot>(`/slots/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
 
   deleteSlot: (id: string) =>
     request<void>(`/slots/${id}`, { method: 'DELETE' }),
