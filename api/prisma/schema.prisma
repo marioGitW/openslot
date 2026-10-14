@@ -1,0 +1,33 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Slot {
+  id          String   @id @default(uuid())
+  topic       String
+  startsAt    DateTime @db.Timestamptz
+  durationMin Int
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  booking     Booking?
+
+  @@index([startsAt])
+}
+
+model Booking {
+  id            String    @id @default(uuid())
+  slotId        String    @unique
+  slot          Slot      @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  name          String
+  email         String
+  note          String?
+  aiMessage     String?
+  aiAgenda      String[]  @default([])
+  aiGeneratedAt DateTime? @db.Timestamptz
+  createdAt     DateTime  @default(now()) @db.Timestamptz
+}

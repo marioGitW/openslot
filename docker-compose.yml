@@ -1,0 +1,22 @@
+# Optional local database instead of Supabase: `docker compose up -d`, then in api/.env
+# set DATABASE_URL and DIRECT_URL to postgresql://openslot:openslot@localhost:5432/openslot
+# Local development only; these credentials are not used anywhere else.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: openslot
+      POSTGRES_PASSWORD: openslot
+      POSTGRES_DB: openslot
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U openslot -d openslot']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:

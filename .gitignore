@@ -152,3 +152,8 @@ vite.config.ts.timestamp-*
 # Claude Code local files
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Google service account credentials
+*service-account*.json
+google-credentials*.json
+*.pem

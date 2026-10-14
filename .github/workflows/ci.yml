@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: api/package-lock.json
+      # postinstall runs `prisma generate`; no database is needed for it.
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      # Unit tests mock the database. The e2e and race tests need a real one.
+      - run: npm run test
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      # Production builds require an API URL; any value works for the check.
+      - run: npm run build
+        env:
+          VITE_API_URL: https://example.invalid
