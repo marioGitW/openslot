@@ -77,7 +77,7 @@ Errors use standard status codes with a readable `message`: `400` for validation
 - **Input is validated twice, and requests are rate-limited.** Zod checks the forms in the
   browser and class-validator DTOs check them again on the server, rejecting unknown
   fields. The API also sends security headers (helmet), caps bodies at 10 kB and limits
-  each IP to 100 requests a minute, or 10 a minute on endpoints that write.
+  each IP to 100 requests a minute per endpoint, or 10 a minute on endpoints that write.
 - **Calendar and AI fail open.** If Google Calendar or Gemini is not configured, errors or
   times out, booking still works: slots are shown as if there were no conflicts, and the
   confirmation falls back to a template. Neither ever blocks a booking.
@@ -141,15 +141,16 @@ Run from `api/`:
 | `npm run lint` / `npm run build` | oxlint / compile to `dist/` |
 | `npm run test` | Unit tests (database mocked) |
 | `npm run test:e2e` | Boots the app against the real database and checks `/health` |
-| `npm run test:race` | Two simultaneous bookings for one slot, against the running API; expects one `201` and one `409`, then cleans up |
-| `npm run db:seed` | Wipes all slots and bookings and creates demo data |
-| `npm run ai:backfill` | Writes AI texts for bookings that don't have them yet |
+| `npm run test:race` | Two simultaneous bookings for one slot, against the running API; expects one `201` and one `409`, then cleans up (runs with tsx) |
+| `npm run db:seed` | Wipes all slots and bookings and creates demo data (runs with tsx) |
+| `npm run ai:backfill` | Writes AI texts for bookings that don't have them yet (compiles to `dist/backfill/` first, since Nest DI needs decorator metadata) |
 
 Run from `web/`: `npm run dev`, `npm run lint`, `npm run build` (needs `VITE_API_URL`) and
 `npm run preview`.
 
 CI (GitHub Actions) runs lint, build and unit tests for both apps on every push to `dev` or
-`main` and on pull requests. It needs no secrets.
+`main` and on pull requests. It needs no secrets. The API is native ESM, and CI also loads
+it with require(esm) disabled, as Vercel does, so a CommonJS/ESM mismatch fails there first.
 
 ## Deploying to Vercel
 
