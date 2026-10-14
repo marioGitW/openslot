@@ -1,0 +1,12 @@
+#!/bin/sh
+# Remove AI attribution trailers from commit messages, whatever tool wrote them.
+# Enable once per clone: git config core.hooksPath .githooks
+
+msg_file="$1"
+tmp_file="${msg_file}.tmp"
+
+grep -v -i -E '^(Co-Authored-By:|Claude-Session:|.*Generated with \[?Claude)' "$msg_file" > "$tmp_file"
+
+# Drop trailing blank lines left behind
+sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp_file" > "$msg_file"
+rm -f "$tmp_file"
