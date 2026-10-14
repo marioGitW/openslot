@@ -15,7 +15,9 @@ interface WeekStripProps {
   selectedDay: string
   /** Open slot count per day key */
   counts: Map<string, number>
+  /** False when no earlier / later week has open times; the arrow is then hidden. */
   canGoPrev: boolean
+  canGoNext: boolean
   onSelectDay: (dayKey: string) => void
   onPrevWeek: () => void
   onNextWeek: () => void
@@ -26,6 +28,7 @@ export function WeekStrip({
   selectedDay,
   counts,
   canGoPrev,
+  canGoNext,
   onSelectDay,
   onPrevWeek,
   onNextWeek,
@@ -42,12 +45,14 @@ export function WeekStrip({
 
   return (
     <div className="flex items-center gap-1 sm:gap-2">
+      {/* Hidden arrows keep their space so the days don't shift. */}
       <Button
         variant="ghost"
         size="icon"
         onClick={onPrevWeek}
         disabled={!canGoPrev}
-        aria-label="Previous week"
+        aria-label="Previous week with open times"
+        className={cn(!canGoPrev && 'invisible')}
       >
         <ChevronLeft className="size-5" aria-hidden />
       </Button>
@@ -110,7 +115,9 @@ export function WeekStrip({
         variant="ghost"
         size="icon"
         onClick={onNextWeek}
-        aria-label="Next week"
+        disabled={!canGoNext}
+        aria-label="Next week with open times"
+        className={cn(!canGoNext && 'invisible')}
       >
         <ChevronRight className="size-5" aria-hidden />
       </Button>

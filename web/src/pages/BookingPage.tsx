@@ -85,7 +85,13 @@ export function BookingPage() {
   const firstOpenDay = byDay.keys().next().value ?? today
   const selectedDay = dayChoice ?? firstOpenDay
   const weekStart = weekStartChoice ?? weekStartFor(today, selectedDay)
-  const weekHasSlots = weekDays(weekStart).some((day) => counts.has(day))
+  // Week navigation skips weeks without open times.
+  const openWeeks = useMemo(
+    () => [...new Set([...byDay.keys()].map((day) => weekStartFor(today, day)))],
+    [byDay, today],
+  )
+  const prevOpenWeek = openWeeks.findLast((start) => start < weekStart)
+  const nextOpenWeek = openWeeks.find((start) => start > weekStart)
 
   const daySlots = useMemo(() => {
     const slots = byDay.get(selectedDay) ?? []
@@ -180,8 +186,8 @@ export function BookingPage() {
         onSelect={selectSlot}
       />
     )
-  } else if (!weekHasSlots) {
-    rail = <EmptyState>No open times this week. Check next week.</EmptyState>
+  } else if (openWeeks.length === 0) {
+    rail = <EmptyState>No open times right now. Check back soon.</EmptyState>
   } else {
     rail = (
       <EmptyState>
@@ -224,10 +230,11 @@ export function BookingPage() {
                 weekStart={weekStart}
                 selectedDay={selectedDay}
                 counts={counts}
-                canGoPrev={daysBetweenKeys(today, weekStart) > 0}
+                canGoPrev={prevOpenWeek !== undefined}
+                canGoNext={nextOpenWeek !== undefined}
                 onSelectDay={selectDay}
-                onPrevWeek={() => goToWeek(addDaysToKey(weekStart, -7))}
-                onNextWeek={() => goToWeek(addDaysToKey(weekStart, 7))}
+                onPrevWeek={() => prevOpenWeek && goToWeek(prevOpenWeek)}
+                onNextWeek={() => nextOpenWeek && goToWeek(nextOpenWeek)}
               />
             )}
             <div className="space-y-4">
