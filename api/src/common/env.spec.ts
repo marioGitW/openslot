@@ -1,4 +1,4 @@
-import { corsOrigins, isProduction, requireEnv } from './env';
+import { corsOrigins, isProduction, requireEnv } from './env.js';
 
 describe('isProduction', () => {
   it.each([

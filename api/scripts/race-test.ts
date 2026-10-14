@@ -8,7 +8,7 @@
  */
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { PrismaClient } from '../src/generated/prisma/client.js';
 
 const API_URL = (process.env.API_URL ?? 'http://localhost:3000').replace(
   /\/$/,

@@ -11,10 +11,10 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
-import { WriteThrottle } from '../common/throttle';
-import { CreateSlotDto } from './dto/create-slot.dto';
-import { ListSlotsQueryDto } from './dto/list-slots-query.dto';
-import { SlotsService } from './slots.service';
+import { WriteThrottle } from '../common/throttle.js';
+import { CreateSlotDto } from './dto/create-slot.dto.js';
+import { ListSlotsQueryDto } from './dto/list-slots-query.dto.js';
+import { SlotsService } from './slots.service.js';
 
 @Controller('slots')
 export class SlotsController {

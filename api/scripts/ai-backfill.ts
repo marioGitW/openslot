@@ -13,10 +13,10 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { AiService } from '../src/ai/ai.service';
-import { AppModule } from '../src/app.module';
-import { BookingsService } from '../src/bookings/bookings.service';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { AiService } from '../src/ai/ai.service.js';
+import { AppModule } from '../src/app.module.js';
+import { BookingsService } from '../src/bookings/bookings.service.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 
 const PAUSE_MS = 2_000;
 

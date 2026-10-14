@@ -5,8 +5,8 @@ import {
   Matches,
   ValidateBy,
 } from 'class-validator';
-import { Trim } from '../../common/trim.transform';
-import { DURATION_MESSAGE, isValidDuration } from '../slot-duration';
+import { Trim } from '../../common/trim.transform.js';
+import { DURATION_MESSAGE, isValidDuration } from '../slot-duration.js';
 
 // One check instead of IsInt/Min/Max/IsDivisibleBy, so a bad value gets one message.
 const IsSlotDuration = () =>

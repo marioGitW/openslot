@@ -4,21 +4,21 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CalendarService } from '../calendar/calendar.service';
-import { findOverlap, Interval } from '../common/intervals';
-import { formatSkopjeRange } from '../common/time-zone';
-import { Slot } from '../generated/prisma/client';
-import { isPrismaError } from '../prisma/prisma-errors';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateSlotDto } from './dto/create-slot.dto';
-import { SlotListStatus } from './dto/list-slots-query.dto';
-import { MAX_DURATION_MIN } from './slot-duration';
+import { CalendarService } from '../calendar/calendar.service.js';
+import { findOverlap, Interval } from '../common/intervals.js';
+import { formatSkopjeRange } from '../common/time-zone.js';
+import { Slot } from '../generated/prisma/client.js';
+import { isPrismaError } from '../prisma/prisma-errors.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { CreateSlotDto } from './dto/create-slot.dto.js';
+import { SlotListStatus } from './dto/list-slots-query.dto.js';
+import { MAX_DURATION_MIN } from './slot-duration.js';
 import {
   SlotResponse,
   slotEndsAt,
   slotInterval,
   toSlotResponse,
-} from './slot.mapper';
+} from './slot.mapper.js';
 
 const MAX_DURATION_MS = MAX_DURATION_MIN * 60_000;
 

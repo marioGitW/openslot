@@ -1,5 +1,5 @@
-import { Booking, Slot } from '../generated/prisma/client';
-import { SlotResponse, toSlotResponse } from '../slots/slot.mapper';
+import { Booking, Slot } from '../generated/prisma/client.js';
+import { SlotResponse, toSlotResponse } from '../slots/slot.mapper.js';
 
 export interface BookingResponse {
   id: string;

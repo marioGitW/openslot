@@ -8,9 +8,9 @@ import {
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
-import { WriteThrottle } from '../common/throttle';
-import { BookingsService } from './bookings.service';
-import { CreateBookingDto } from './dto/create-booking.dto';
+import { WriteThrottle } from '../common/throttle.js';
+import { BookingsService } from './bookings.service.js';
+import { CreateBookingDto } from './dto/create-booking.dto.js';
 
 @Controller()
 export class BookingsController {

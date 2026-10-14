@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiError, GoogleGenAI } from '@google/genai';
-import { HOST_FIRST_NAME } from '../common/host';
+import { HOST_FIRST_NAME } from '../common/host.js';
 import {
   formatSkopjeDay,
   formatSkopjeSlot,
   formatSkopjeTime,
-} from '../common/time-zone';
-import { TimeoutError, withTimeout } from '../common/timeout';
+} from '../common/time-zone.js';
+import { TimeoutError, withTimeout } from '../common/timeout.js';
 
 const TIMEOUT_MS = 6_000;
 const MAX_MESSAGE_LENGTH = 400;

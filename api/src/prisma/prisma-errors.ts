@@ -1,4 +1,4 @@
-import { Prisma } from '../generated/prisma/client';
+import { Prisma } from '../generated/prisma/client.js';
 
 // P2002 = unique constraint violation, P2003 = foreign key constraint violation.
 export function isPrismaError(

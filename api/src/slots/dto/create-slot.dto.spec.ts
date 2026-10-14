@@ -1,7 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { DURATION_MESSAGE } from '../slot-duration';
-import { CreateSlotDto } from './create-slot.dto';
+import { DURATION_MESSAGE } from '../slot-duration.js';
+import { CreateSlotDto } from './create-slot.dto.js';
 
 async function durationErrors(durationMin: unknown): Promise<string[]> {
   const dto = plainToInstance(CreateSlotDto, {

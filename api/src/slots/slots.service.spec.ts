@@ -1,13 +1,18 @@
+import { jest } from '@jest/globals';
 import {
   BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { CalendarService } from '../calendar/calendar.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { MAX_DURATION_MIN } from './slot-duration';
-import { SlotsService } from './slots.service';
+import { CalendarService } from '../calendar/calendar.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { MAX_DURATION_MIN } from './slot-duration.js';
+import { SlotsService } from './slots.service.js';
+
+// Mocks return plain test objects, so async mocks are typed loosely.
+type AsyncFn = (...args: unknown[]) => Promise<unknown>;
+type SlotData = { topic: string; startsAt: Date; durationMin: number };
 
 const MINUTE = 60_000;
 
@@ -15,15 +20,15 @@ describe('SlotsService overlap rule', () => {
   let service: SlotsService;
   const prisma = {
     slot: {
-      findMany: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      updateMany: jest.fn(),
+      findMany: jest.fn<AsyncFn>(),
+      create: jest.fn<(args: { data: SlotData }) => Promise<unknown>>(),
+      findUnique: jest.fn<AsyncFn>(),
+      updateMany: jest.fn<AsyncFn>(),
     },
   };
   const calendar = {
-    findConflict: jest.fn(),
-    getBusyIntervalsForDays: jest.fn(),
+    findConflict: jest.fn<AsyncFn>(),
+    getBusyIntervalsForDays: jest.fn<AsyncFn>(),
   };
 
   // Existing slot: tomorrow 10:00–10:30 (relative to now).
@@ -44,12 +49,8 @@ describe('SlotsService overlap rule', () => {
     calendar.findConflict.mockResolvedValue(null);
     calendar.getBusyIntervalsForDays.mockResolvedValue({ ok: true, busy: [] });
     prisma.slot.findMany.mockResolvedValue([existing]);
-    prisma.slot.create.mockImplementation(
-      ({
-        data,
-      }: {
-        data: { topic: string; startsAt: Date; durationMin: number };
-      }) => Promise.resolve({ id: 'new', createdAt: new Date(), ...data }),
+    prisma.slot.create.mockImplementation(({ data }) =>
+      Promise.resolve({ id: 'new', createdAt: new Date(), ...data }),
     );
     const moduleRef = await Test.createTestingModule({
       providers: [

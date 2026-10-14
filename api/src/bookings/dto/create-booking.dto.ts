@@ -7,7 +7,7 @@ import {
   Length,
   MaxLength,
 } from 'class-validator';
-import { Trim, TrimLowercase } from '../../common/trim.transform';
+import { Trim, TrimLowercase } from '../../common/trim.transform.js';
 
 export class CreateBookingDto {
   @Trim()
