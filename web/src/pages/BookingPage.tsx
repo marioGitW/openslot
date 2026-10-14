@@ -178,6 +178,7 @@ export function BookingPage() {
     rail = (
       <ErrorState
         message="Couldn't load times."
+        detail={errorMessage(slotsQuery.error)}
         onRetry={() => void slotsQuery.refetch()}
         retrying={slotsQuery.isFetching}
       />

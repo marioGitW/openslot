@@ -45,7 +45,9 @@ interface ErrorBody {
 }
 
 // Our own errors carry a string message; DTO validation errors carry an array.
+// Server errors only ever say "Internal server error", so they get a friendlier line.
 function readErrorMessage(body: unknown, status: number): string {
+  if (status >= 500) return 'Something went wrong on our side. Please try again.'
   const { message, error } = (body ?? {}) as ErrorBody
   if (Array.isArray(message) && message.length > 0) return message.join('\n')
   if (typeof message === 'string' && message) return message

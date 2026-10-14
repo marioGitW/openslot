@@ -15,6 +15,7 @@ import { useCalendarStatus } from '@/hooks/useCalendarStatus'
 import { useHostFilters } from '@/hooks/useHostFilters'
 import { MEDIA, useMediaQuery } from '@/hooks/useMediaQuery'
 import { useSlots } from '@/hooks/useSlots'
+import { errorMessage } from '@/lib/api'
 import { filterSlots } from '@/lib/slots'
 import type { Slot } from '@/lib/types'
 
@@ -46,6 +47,7 @@ export function HostPage() {
     list = (
       <ErrorState
         message="Couldn't load slots."
+        detail={errorMessage(slotsQuery.error)}
         onRetry={() => void slotsQuery.refetch()}
         retrying={slotsQuery.isFetching}
       />
