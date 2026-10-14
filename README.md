@@ -3,8 +3,16 @@
 OpenSlot lets a single host publish office-hour slots that anyone can book in a few clicks,
 without double bookings.
 
-Live app: todo
-API: TODO
+**Live app:** https://openslot-web-puce.vercel.app · **Host view:** https://openslot-web-puce.vercel.app/host · **API:** https://openslot-api.vercel.app/health
+
+I framed the brief as expert office hours: a teammate books 15–60 minutes with the person who knows a topic best. That fits a team-skills product better than a generic calendar.
+
+### Try it in two minutes
+1. Pick a day and a time, book it with any name and email, and watch the AI confirmation appear.
+2. Open the host view. Your booking is there with an AI prep agenda.
+3. Slots marked "Calendar conflict" clash with the host's Google Calendar (weekday standup 10:00–10:30) and don't appear on the booking page.
+4. Try publishing a 15-minute slot at 10:15 on a weekday where 10:00–10:30 is still free in the host view. It's refused because of the calendar.
+5. Open the same slot in two tabs and book both. Only one wins.
 
 Built with React, NestJS and PostgreSQL for the TeamLift Product Engineer internship
 challenge.
@@ -84,7 +92,7 @@ Errors use standard status codes with a readable `message`: `400` for validation
 
 ## Run locally
 
-You need Node 24 and npm.
+You need Node 24 (22.12 or newer also works) and npm.
 
 1. Clone and enable the commit hook:
 
@@ -254,7 +262,17 @@ listed test users could connect.
 
 ## AI tools I used
 
-TODO
+- **Claude (chat)** for planning: turning the brief into a PRD, choosing the stack, designing the data model and API, and writing step-by-step prompts for each milestone. I reviewed every report before moving on.
+- **Claude Code** in VS Code and in the terminal to build it. Project rules live in `AGENTS.md` (scope, conventions, rules that must never break, one-line commits). Bigger steps started in plan mode so I approved the approach before any code was written.
+- **Lovable** to explore the UI quickly with mock data. I then rebuilt the design in `web/` with shadcn/ui and the Modern Minimal theme, connected to the real API.
+
+What I had to catch or correct:
+- npm's `latest` tag pointed the Prisma CLI at an 8.0 release candidate; I pinned everything to 7.10 so versions match.
+- `prisma init` added 67 unrelated agent files to the repo; I removed them.
+- The API was first built as CommonJS. NestJS 12 is ESM-only, and local Node (22.12+ allows `require()` of ES modules) hid the problem, but Vercel crashed. I converted the API to ESM and added a CI check that loads it the way Vercel does.
+- I tested the UI myself and fixed what the AI missed: the theme toggle needed two clicks, the booking panel didn't reset when changing day, and validation messages appeared at the wrong time.
+
+The decisions were mine: the office-hours framing, enforcing "no double booking" in the database instead of in code, free/busy-only calendar access, and making the calendar and AI features fail open so they can never block a booking.
 
 ## What I'd improve with more time
 
