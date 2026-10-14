@@ -3,18 +3,31 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { AiService, BookingTexts } from '../ai/ai.service';
 import { CalendarService } from '../calendar/calendar.service';
+import { Booking } from '../generated/prisma/client';
 import { isPrismaError } from '../prisma/prisma-errors';
 import { PrismaService } from '../prisma/prisma.service';
-import { slotInterval } from '../slots/slot.mapper';
+import { slotEndsAt, slotInterval } from '../slots/slot.mapper';
 import { BookingResponse, toBookingResponse } from './booking.mapper';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
+function storedAiMessage(booking: Booking): BookingTexts {
+  return {
+    message: booking.aiMessage ?? '',
+    agenda: booking.aiAgenda,
+    source: 'ai',
+  };
+}
+
 @Injectable()
 export class BookingsService {
+  private readonly aiInFlight = new Map<string, Promise<BookingTexts>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly calendar: CalendarService,
+    private readonly ai: AiService,
   ) {}
 
   async create(
@@ -62,6 +75,61 @@ export class BookingsService {
       }
       throw error;
     }
+  }
+
+  /**
+   * The Gemini confirmation and host agenda, generated at most once: a success is
+   * stored and returned from then on; a fallback isn't stored, so a later call can
+   * still succeed. Concurrent calls for one booking share a single request.
+   */
+  generateAiMessage(id: string): Promise<BookingTexts> {
+    const pending = this.aiInFlight.get(id);
+    if (pending) return pending;
+    const promise = this.loadOrGenerateAiMessage(id).finally(() =>
+      this.aiInFlight.delete(id),
+    );
+    this.aiInFlight.set(id, promise);
+    return promise;
+  }
+
+  private async loadOrGenerateAiMessage(id: string): Promise<BookingTexts> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { id },
+      include: { slot: true },
+    });
+    if (!booking) {
+      throw new NotFoundException('Booking not found.');
+    }
+    if (booking.aiGeneratedAt) {
+      return storedAiMessage(booking);
+    }
+
+    const texts = await this.ai.generateBookingTexts({
+      bookingId: booking.id,
+      firstName: booking.name.split(/\s+/)[0],
+      topic: booking.slot.topic,
+      startsAt: booking.slot.startsAt,
+      endsAt: slotEndsAt(booking.slot),
+      note: booking.note,
+    });
+    if (texts.source !== 'ai') {
+      return texts;
+    }
+
+    // First write wins if another instance generated text at the same time.
+    const { count } = await this.prisma.booking.updateMany({
+      where: { id, aiGeneratedAt: null },
+      data: {
+        aiMessage: texts.message,
+        aiAgenda: texts.agenda,
+        aiGeneratedAt: new Date(),
+      },
+    });
+    if (count === 0) {
+      const stored = await this.prisma.booking.findUnique({ where: { id } });
+      if (stored?.aiGeneratedAt) return storedAiMessage(stored);
+    }
+    return texts;
   }
 
   async findOne(id: string): Promise<BookingResponse> {

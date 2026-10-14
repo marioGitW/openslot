@@ -6,6 +6,8 @@ export interface SlotBookingResponse {
   name: string;
   email: string;
   note: string | null;
+  /** Host prep agenda written by Gemini; empty until generated. */
+  aiAgenda: string[];
   createdAt: Date;
 }
 
@@ -49,8 +51,8 @@ export function toSlotResponse(
     status: booked ? 'booked' : 'available',
   };
   if (options.includeBooking && slot.booking) {
-    const { id, name, email, note, createdAt } = slot.booking;
-    response.booking = { id, name, email, note, createdAt };
+    const { id, name, email, note, aiAgenda, createdAt } = slot.booking;
+    response.booking = { id, name, email, note, aiAgenda, createdAt };
   }
   return response;
 }

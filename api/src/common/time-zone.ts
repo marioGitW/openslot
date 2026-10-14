@@ -12,6 +12,16 @@ export function skopjeDayWindow(start: Date, end: Date): Interval {
   return { start: new Date(from.getTime()), end: new Date(to.getTime()) };
 }
 
+/** `Thursday, 15 October` in Skopje. */
+export function formatSkopjeDay(date: Date): string {
+  return format(new TZDate(date.getTime(), TIME_ZONE), 'EEEE, d MMMM');
+}
+
+/** `10:00` in Skopje. */
+export function formatSkopjeTime(date: Date): string {
+  return format(new TZDate(date.getTime(), TIME_ZONE), 'HH:mm');
+}
+
 /** `10:00–10:30`, or `16 Oct 00:00–17 Oct 00:00` when the range spans days. */
 export function formatSkopjeRange(start: Date, end: Date): string {
   const from = new TZDate(start.getTime(), TIME_ZONE);

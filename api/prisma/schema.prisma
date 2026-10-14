@@ -20,12 +20,14 @@ model Slot {
 }
 
 model Booking {
-  id        String   @id @default(uuid())
-  slotId    String   @unique
-  slot      Slot     @relation(fields: [slotId], references: [id], onDelete: Restrict)
-  name      String
-  email     String
-  note      String?
-  aiMessage String?
-  createdAt DateTime @default(now()) @db.Timestamptz
+  id            String    @id @default(uuid())
+  slotId        String    @unique
+  slot          Slot      @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  name          String
+  email         String
+  note          String?
+  aiMessage     String?
+  aiAgenda      String[]  @default([])
+  aiGeneratedAt DateTime? @db.Timestamptz
+  createdAt     DateTime  @default(now()) @db.Timestamptz
 }

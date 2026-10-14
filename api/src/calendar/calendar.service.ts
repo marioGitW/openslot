@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { auth, calendar, calendar_v3 } from '@googleapis/calendar';
 import { findOverlap, Interval } from '../common/intervals';
 import { skopjeDayWindow } from '../common/time-zone';
+import { withTimeout } from '../common/timeout';
 
 // Least privilege: free/busy only, no event titles or details.
 const FREEBUSY_SCOPE = 'https://www.googleapis.com/auth/calendar.freebusy';
@@ -67,14 +68,6 @@ function splitWindow(start: Date, end: Date): Interval[] {
     chunks.push({ start: new Date(from), end: new Date(to) });
   }
   return chunks;
-}
-
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`Timed out after ${ms} ms`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /**

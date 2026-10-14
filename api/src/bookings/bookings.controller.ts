@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -24,5 +26,12 @@ export class BookingsController {
   @Get('bookings/:id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.bookingsService.findOne(id);
+  }
+
+  // 200, not 201: after the first success this only returns the stored text.
+  @Post('bookings/:id/ai-message')
+  @HttpCode(HttpStatus.OK)
+  generateAiMessage(@Param('id', ParseUUIDPipe) id: string) {
+    return this.bookingsService.generateAiMessage(id);
   }
 }

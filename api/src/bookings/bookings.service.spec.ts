@@ -1,9 +1,21 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { Prisma } from '../generated/prisma/client';
+import { AiService } from '../ai/ai.service';
 import { CalendarService } from '../calendar/calendar.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingsService } from './bookings.service';
+
+const mockGenerate = jest.fn();
+
+jest.mock('@google/genai', () => ({
+  ApiError: class extends Error {},
+  // A plain class: `jest.resetAllMocks()` below would wipe a jest.fn implementation.
+  GoogleGenAI: class {
+    models = { generateContent: mockGenerate };
+  },
+}));
 
 const HOUR = 60 * 60_000;
 
@@ -11,9 +23,14 @@ describe('BookingsService', () => {
   let service: BookingsService;
   const prisma = {
     slot: { findUnique: jest.fn() },
-    booking: { create: jest.fn(), findUnique: jest.fn() },
+    booking: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      updateMany: jest.fn(),
+    },
   };
   const calendar = { findConflict: jest.fn() };
+  const ai = { generateBookingTexts: jest.fn() };
 
   const dto = { name: 'Ana', email: 'ana@example.com', note: 'Hi' };
   const futureSlot = () => ({
@@ -32,6 +49,7 @@ describe('BookingsService', () => {
         BookingsService,
         { provide: PrismaService, useValue: prisma },
         { provide: CalendarService, useValue: calendar },
+        { provide: AiService, useValue: ai },
       ],
     }).compile();
     service = moduleRef.get(BookingsService);
@@ -183,5 +201,182 @@ describe('BookingsService', () => {
         durationMin: slot.durationMin,
       }),
     ).resolves.toMatchObject({ id: 'booking-1' });
+  });
+
+  describe('generateAiMessage', () => {
+    const slot = futureSlot();
+    const booking = (overrides: object = {}) => ({
+      id: 'booking-1',
+      slotId: slot.id,
+      ...dto,
+      name: 'Ana Petrova',
+      aiMessage: null,
+      aiAgenda: [],
+      aiGeneratedAt: null,
+      createdAt: new Date(),
+      slot,
+      ...overrides,
+    });
+    const generated = {
+      message: 'Hi Ana, see you soon.',
+      agenda: ['One', 'Two', 'Three'],
+      source: 'ai' as const,
+    };
+
+    it('generates text, stores it and returns it', async () => {
+      prisma.booking.findUnique.mockResolvedValue(booking());
+      ai.generateBookingTexts.mockResolvedValue(generated);
+      prisma.booking.updateMany.mockResolvedValue({ count: 1 });
+
+      await expect(service.generateAiMessage('booking-1')).resolves.toEqual(
+        generated,
+      );
+      expect(ai.generateBookingTexts).toHaveBeenCalledWith({
+        bookingId: 'booking-1',
+        firstName: 'Ana',
+        topic: slot.topic,
+        startsAt: slot.startsAt,
+        endsAt: new Date(slot.startsAt.getTime() + 30 * 60_000),
+        note: dto.note,
+      });
+      expect(prisma.booking.updateMany).toHaveBeenCalledWith({
+        where: { id: 'booking-1', aiGeneratedAt: null },
+        data: {
+          aiMessage: generated.message,
+          aiAgenda: generated.agenda,
+          aiGeneratedAt: expect.any(Date) as Date,
+        },
+      });
+    });
+
+    it('returns the stored text without calling Gemini again', async () => {
+      prisma.booking.findUnique.mockResolvedValue(
+        booking({
+          aiMessage: generated.message,
+          aiAgenda: generated.agenda,
+          aiGeneratedAt: new Date(),
+        }),
+      );
+
+      await expect(service.generateAiMessage('booking-1')).resolves.toEqual(
+        generated,
+      );
+      expect(ai.generateBookingTexts).not.toHaveBeenCalled();
+      expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('returns the fallback without storing it', async () => {
+      const fallback = { message: 'Booked.', agenda: [], source: 'fallback' };
+      prisma.booking.findUnique.mockResolvedValue(booking());
+      ai.generateBookingTexts.mockResolvedValue(fallback);
+
+      await expect(service.generateAiMessage('booking-1')).resolves.toEqual(
+        fallback,
+      );
+      expect(prisma.booking.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('returns the text stored by a concurrent request that won the write', async () => {
+      const stored = { message: 'Stored first.', agenda: ['A', 'B', 'C'] };
+      prisma.booking.findUnique
+        .mockResolvedValueOnce(booking())
+        .mockResolvedValueOnce(
+          booking({
+            aiMessage: stored.message,
+            aiAgenda: stored.agenda,
+            aiGeneratedAt: new Date(),
+          }),
+        );
+      ai.generateBookingTexts.mockResolvedValue(generated);
+      prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.generateAiMessage('booking-1')).resolves.toEqual({
+        ...stored,
+        source: 'ai',
+      });
+    });
+
+    it('shares one Gemini call between concurrent requests', async () => {
+      prisma.booking.findUnique.mockResolvedValue(booking());
+      ai.generateBookingTexts.mockResolvedValue(generated);
+      prisma.booking.updateMany.mockResolvedValue({ count: 1 });
+
+      const results = await Promise.all([
+        service.generateAiMessage('booking-1'),
+        service.generateAiMessage('booking-1'),
+      ]);
+
+      expect(results).toEqual([generated, generated]);
+      expect(ai.generateBookingTexts).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws NotFoundException when the booking does not exist', async () => {
+      prisma.booking.findUnique.mockResolvedValue(null);
+
+      await expect(service.generateAiMessage('missing')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(ai.generateBookingTexts).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe('BookingsService with the real AiService', () => {
+  it('never sends the booker email (or last name) to Gemini', async () => {
+    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    mockGenerate.mockResolvedValue({
+      text: JSON.stringify({
+        message: 'Hi Ana, see you soon.',
+        agenda: ['One', 'Two', 'Three'],
+      }),
+    });
+    const slot = {
+      id: 'slot-1',
+      topic: 'Office hours',
+      startsAt: new Date(Date.now() + HOUR),
+      durationMin: 30,
+      createdAt: new Date(),
+    };
+    const prisma = {
+      booking: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'booking-1',
+          slotId: slot.id,
+          name: 'Ana Petrova',
+          email: 'ana.petrova@example.com',
+          note: 'Hi',
+          aiMessage: null,
+          aiAgenda: [],
+          aiGeneratedAt: null,
+          createdAt: new Date(),
+          slot,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const env: Record<string, string> = {
+      GEMINI_API_KEY: 'test-key',
+      GEMINI_MODEL: 'gemini-test-model',
+    };
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        BookingsService,
+        AiService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: CalendarService, useValue: {} },
+        {
+          provide: ConfigService,
+          useValue: { get: (key: string) => env[key] },
+        },
+      ],
+    }).compile();
+
+    await moduleRef.get(BookingsService).generateAiMessage('booking-1');
+
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    const request = JSON.stringify(mockGenerate.mock.calls[0]);
+    expect(request).not.toContain('ana.petrova@example.com');
+    expect(request).not.toContain('@example.com');
+    expect(request).not.toContain('Petrova');
   });
 });
